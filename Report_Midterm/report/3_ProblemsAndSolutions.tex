@@ -1,0 +1,19 @@
+\chapter{Vấn đề và Giải pháp (Problems \& Proposed Solutions)}
+
+\section{Problem 1: Sự cứng nhắc của tìm kiếm từ khóa (The Rigidity of Keyword Search)}
+\begin{itemize}
+    \item \textbf{Vấn đề:} Người dùng phải gõ chính xác từ khóa. Các từ đồng nghĩa (synonyms) hoặc cách diễn đạt khác (rephrasing) sẽ trả về 0 kết quả.
+    \item \textbf{Giải pháp Elasticsearch:} Cung cấp khả năng Vector Search (kNN) để hiểu "ngữ nghĩa ngữ cảnh" của câu truy vấn thay vì chỉ khớp từng từ.
+\end{itemize}
+
+\section{Problem 2: AI bỏ sót các thuật ngữ chuyên ngành (AI Misses Specialized Terminology)}
+\begin{itemize}
+    \item \textbf{Vấn đề:} AI hiểu ngữ cảnh tốt nhưng lại kém trong việc tìm kiếm chính xác tên tác giả hoặc các từ viết tắt hiếm gặp.
+    \item \textbf{Giải pháp Elasticsearch:} Chạy song song cả hai luồng (Hybrid Search) và tích hợp sẵn thuật toán Reciprocal Rank Fusion (RRF) để tự động tính điểm và gộp kết quả từ AI và Keyword với độ chính xác cao.
+\end{itemize}
+
+\section{Problem 3: Nhiễu tìm kiếm đa ngành (Search Skewed by Multidisciplinary Noise)}
+\begin{itemize}
+    \item \textbf{Vấn đề:} Một từ khóa có thể có nhiều nghĩa. Việc áp dụng các bộ lọc cứng (năm, danh mục) vào hệ thống AI thường làm phá vỡ cấu trúc tìm kiếm, gây thiếu sót kết quả hoặc độ trễ cao.
+    \item \textbf{Giải pháp Elasticsearch:} Tính năng Automatic Optimization filtering giúp tự động chuyển đổi giữa các thuật toán quét (scanning algorithms) dựa trên độ nghiêm ngặt của bộ lọc, đảm bảo phản hồi nhanh và chính xác.
+\end{itemize}

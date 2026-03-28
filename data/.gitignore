@@ -1,0 +1,4 @@
+# Ignore generated / large datasets by default (clone repo rồi tải Kaggle + chạy pipeline).
+*
+!.gitignore
+!test_queries.json

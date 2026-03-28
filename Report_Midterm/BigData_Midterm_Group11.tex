@@ -1,0 +1,338 @@
+% \documentclass[letterpaper,12pt]{report}
+
+% % Packages
+% \usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+% \usepackage{geometry}
+% \usepackage{setspace}
+% \usepackage{amsmath,amsfonts,amssymb,amsthm}
+% \usepackage{graphicx}
+% \usepackage{hyperref}
+% \usepackage{titlesec}
+% \usepackage{fancyhdr}
+% \usepackage{lipsum} % For generating dummy text, you can remove this.
+
+% % Page setup
+% \geometry{margin=1in}
+% \onehalfspacing
+
+% % Title page
+% \title{Your Technical Report Title}
+% \author{Your Team Name with team member list and student ID}
+% \date{\today}
+
+% % Header and footer
+% \pagestyle{fancy}
+% \fancyhf{}
+% \rhead{\thepage}
+% \lhead{\leftmark}
+
+% % Section and subsection formatting
+% \titleformat{\chapter}[display]
+%   {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+% \titleformat{\section}
+%   {\normalfont\Large\bfseries}{\thesection}{1em}{}
+% \titleformat{\subsection}
+%   {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+% \titleformat{\subsubsection}
+%   {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% \begin{document}
+
+% \maketitle
+
+% \tableofcontents
+
+
+% \end{document}
+
+\documentclass[letterpaper,12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{vietnam}
+\usepackage{a4wide,amssymb,epsfig,latexsym,multicol,array,hhline,fancyhdr}
+\usepackage{amsmath}
+\usepackage{lastpage}
+% \usepackage[lined,boxed,commentsnumbered]{algorithm2e}
+\usepackage[ruled,vlined,noend]{algorithm2e}
+\usepackage{enumerate}
+\usepackage{color}
+\usepackage{graphicx}							% Standard graphics package
+\graphicspath{{images/}}
+\usepackage{array}
+\usepackage{tabularx, caption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{rotating}
+\usepackage{graphics}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{epsfig}
+\usepackage{parskip}
+\usepackage{mathrsfs}
+\usepackage{tikz}
+\usepackage{longtable}
+\usetikzlibrary{arrows,snakes,backgrounds,positioning,shapes.geometric,fit,calc}
+\usepackage{hyperref}
+\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
+\usepackage{parskip}
+%\usepackage{pstcol} 								% PSTricks with the standard color package
+% \usepackage{algorithm}
+% \usepackage{algorithmic}
+\usepackage{float}
+\usepackage{listings}
+\makeatletter
+\renewcommand{\@makechapterhead}[1]{%
+  \vspace*{-30pt}%
+  {\parindent \z@ \raggedright \normalfont
+    \ifnum \c@secnumdepth >\m@ne
+        \huge\bfseries \@chapapp\space \thechapter
+        \par\nobreak
+        \vskip 10\p@
+    \fi
+    \interlinepenalty\@M
+    \Huge \bfseries #1\par\nobreak
+    \vskip 20\p@
+  }}
+\renewcommand{\@makeschapterhead}[1]{%
+  \vspace*{-30pt}%
+  {\parindent \z@ \raggedright
+    \normalfont
+    \interlinepenalty\@M
+    \Huge \bfseries #1\par\nobreak
+    \vskip 20\p@
+  }}
+\makeatother
+% \usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\renewcommand{\lstlistingname}{Program}
+\lstdefinestyle{mein_style}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=Python
+}
+
+\lstset{style=mein_style}
+
+\usepackage{subcaption}
+\DeclareCaptionFormat{custom}
+{%
+    \textbf{#1#2}\textit{ #3}
+}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\usepackage[perpage]{footmisc}
+\captionsetup{format=custom}
+\captionsetup[table]{name=Table}
+
+\newtheorem{theorem}{{\bf Theorem}}
+\newtheorem{property}{{\bf Property}}
+\newtheorem{proposition}{{\bf Proposition}}
+\newtheorem{corollary}[proposition]{{\bf Corollary}}
+\newtheorem{lemma}[proposition]{{\bf Lemma}}
+
+% \AtBeginDocument{\renewcommand*\contentsname{Contents}}
+% \AtBeginDocument{\renewcommand*\refname{References}}
+%\usepackage{fancyhdr}
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhead{} % clear all header fields
+\fancyhead[L]{
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=8mm, height=8mm]{hcmut.png}}
+    %\put(0,-8){\epsfig{width=10mm,figure=hcmut.eps}}
+   \end{picture}&
+	%\includegraphics[width=8mm, height=8mm]{hcmut.png} & %
+	\begin{tabular}{l}
+		\textbf{\bf \ttfamily University of Technology, Ho Chi Minh City}\\
+		\textbf{\bf \ttfamily Faculty of Computer Science and Engineering}
+	\end{tabular} 	
+ \end{tabular}
+}
+\fancyhead[R]{
+	\begin{tabular}{l}
+		\tiny \bf \\
+		\tiny \bf 
+	\end{tabular}  }
+\fancyfoot{} % clear all footer fields
+\fancyfoot[L]{\scriptsize \ttfamily Big Data, Semester 2, Academic year 2025-2026}
+\fancyfoot[R]{\scriptsize \ttfamily {\thepage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+
+%%%
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+\makeatletter
+\newcounter {subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
+                                     {1.5ex \@plus .2ex}%
+                                     {\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{3}{10.0em}{4.1em}}
+\newcommand*{\subsubsubsectionmark}[1]{}
+\makeatother
+
+\usepackage{tcolorbox}
+
+
+% Define a custom theorem box
+\newtcolorbox{theorembox}{colback=blue!5!white, colframe=blue!75!black, 
+    fonttitle=\bfseries, title=Theorem}
+
+\begin{document}
+
+% \maketitle
+
+% \tableofcontents
+
+\pagenumbering{gobble}
+\begin{titlepage}
+\begin{center}
+VIETNAM NATIONAL UNIVERSITY, HO CHI MINH CITY \par
+UNIVERSITY OF TECHNOLOGY \par
+FACULTY OF COMPUTER SCIENCE AND ENGINEERING
+\end{center}
+
+\vspace{1cm}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=3cm]{hcmut.png}
+\end{center}
+\end{figure}
+
+\vspace{1cm}
+
+
+\begin{center}
+\begin{tabular}{c}
+\multicolumn{1}{c}{\textbf{{ BIG DATA }}}\\
+~~\\
+\hline
+\\
+\multicolumn{1}{c}{\textbf{{\Large Midterm Report}}}\\
+\\
+\textbf{{\Huge Building a Hybrid Search System}}\\
+\textbf{{\Huge for Academic Documents}}\\
+\textbf{{\Huge using Elasticsearch}}\\
+\\
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{table}[h]
+\begin{tabular}{rrll}
+
+\hspace{1 cm} & \textbf{Instructor(s)}: & PGS.TS Thoai Nam\\
+        
+& \textbf{Student(s)}: & Duong Gia An & 2470293\\
+& & Trinh Son Lam & 2470287\\
+& & Nguyen Thanh Huyen & 2570416\\
+
+\end {tabular}
+\end{table}
+\vspace{1cm}
+\begin{center}
+{\footnotesize HO CHI MINH CITY, MARCH 2026}
+\end{center}
+\end{titlepage}
+
+\newpage
+
+\chapter*{Contribution}
+\addcontentsline{toc}{chapter}{Contribution}
+
+% Team Effort Breakdown Table
+\textbf{Team Effort Breakdown:}
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{Member} & \textbf{Name} & \textbf{Contribute} & \textbf{Effort (\%)} \\
+        \hline
+        1 & Duong Gia An & System Architecture, Elasticsearch Setup & 33.33\% \\
+        \hline
+        2 & Trinh Son Lam & Data Cleaning, Problems \& Solutions & 33.33\% \\
+        \hline
+        3 & Nguyen Thanh Huyen & Theoretical Background, Report Formatting & 33.33\% \\
+        \hline
+
+    \end{tabular}
+\end{center}
+
+\pagestyle{empty}
+
+\clearpage
+\tableofcontents
+
+% To prevent headers/footers on all pages during ToC
+
+\clearpage
+\pagenumbering{roman}
+\addcontentsline{toc}{section}{List of Figures}
+\renewcommand{\listfigurename}{List of Figures}
+\listoffigures
+
+% \pagebreak
+% \addcontentsline{toc}{section}{List of Tables}
+% \renewcommand{\listtablename}{List of Tables}
+% \listoftables
+
+
+\pagebreak
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \addcontentsline{toc}{section}{}
+% \begin{center}
+% \section*{{MEMBER LIST AND WORKLOAD}}
+
+% \end{center}
+
+
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagenumbering{arabic}
+\pagestyle{fancy}
+\input{report/1_Introduction}
+\input{report/2_Dataset}
+\input{report/3_ProblemsAndSolutions}
+\input{report/4_TheoreticalBackground}
+\input{report/5_SystemArchitecture}
+\input{report/6_CurrentProgress}
+% \input{report/7_Roadmap}
+\input{report/8_Conclusion}
+
+
+
+
+\bibliographystyle{plain}  % Use the "plain" citation style
+\bibliography{references}   % references.bib is your BibTeX file
+\addcontentsline{toc}{chapter}{References}
+\end{document}

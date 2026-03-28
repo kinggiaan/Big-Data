@@ -1,0 +1,140 @@
+\chapter{Hiện trạng triển khai (Current Progress)}
+
+\section{Các hạng mục đã hoàn thành}
+Trong giai đoạn đầu của dự án, nhóm đã tập trung xây dựng nền tảng dữ liệu và hệ thống tìm kiếm cơ sở (Baseline Search), cụ thể:
+
+\subsection{Thiết lập hạ tầng (Infrastructure Setup)}
+Triển khai thành công cụm Elasticsearch 8.12 và giao diện quản trị Kibana thông qua Docker Compose. Cấu hình bao gồm:
+\begin{itemize}
+    \item Elasticsearch single-node cluster với 2GB heap memory.
+    \item Kibana cho phép trực quan hóa dữ liệu và thử nghiệm truy vấn qua Dev Tools.
+    \item Persistent volume đảm bảo dữ liệu không bị mất khi container restart.
+\end{itemize}
+
+% ===== HƯỚNG DẪN: Chụp screenshot Docker Desktop hoặc terminal "docker ps" =====
+% Uncomment 3 dòng dưới khi đã có file ảnh:
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{docker_containers.png}
+\caption{Docker containers đang chạy Elasticsearch 8.12 và Kibana}
+\label{fig:docker-containers}
+\end{figure}
+
+\subsection{Tiền xử lý dữ liệu (Data Engineering)}
+Xây dựng script Python (\texttt{data\_prep.py}) để xử lý file dữ liệu gốc hơn 3GB bằng kỹ thuật streaming (đọc từng dòng). Kết quả:
+\begin{itemize}
+    \item Trích xuất thành công \textbf{100,000 bài báo} thuộc lĩnh vực Computer Science.
+    \item File output (\texttt{arxiv\_cs\_100k\_clean.json}): \textasciitilde 350MB, định dạng JSON chuẩn.
+    \item Thời gian xử lý: vài phút trên máy cá nhân.
+\end{itemize}
+
+\subsection{Lập chỉ mục (Bulk Indexing)}
+Thiết kế Index Mapping tường minh và sử dụng Bulk API để đẩy toàn bộ dữ liệu vào Elasticsearch (\texttt{index\_data.py}):
+\begin{itemize}
+    \item 100,000 documents được index thành công với batch size 5,000.
+    \item Kiểm chứng qua Kibana Dev Tools (Hình \ref{fig:kibana-count}):
+\end{itemize}
+
+\begin{lstlisting}[caption={Kết quả kiểm tra số lượng documents đã index},label={lst:count-check}]
+GET /arxiv_papers/_count
+// Response:
+{
+  "count": 100000,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  }
+}
+\end{lstlisting}
+
+% ===== HƯỚNG DẪN: Chụp screenshot Kibana Dev Tools với query _count =====
+% Uncomment 3 dòng dưới khi đã có file ảnh:
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{kibana_count.png}
+\caption{Kibana Dev Tools -- Kết quả xác nhận 100,000 documents đã được index}
+\label{fig:kibana-count}
+\end{figure}
+
+\subsection{Truy vấn cơ sở (Baseline BM25 Search)}
+Hiện thực module tìm kiếm từ khóa (\texttt{search.py}) sử dụng thuật toán BM25 với các tính năng:
+\begin{itemize}
+    \item Tìm kiếm đồng thời trên \texttt{title} (boost $\times 2$) và \texttt{abstract} sử dụng \texttt{multi\_match} query.
+    \item Hỗ trợ lọc theo \texttt{year} thông qua \texttt{bool} filter (exact-match).
+    \item Kết quả được xếp hạng theo BM25 score, trả về top-k documents.
+\end{itemize}
+
+Ví dụ truy vấn BM25 kết hợp filter theo năm và kết quả thực tế từ hệ thống:
+
+\begin{lstlisting}[caption={Truy vấn BM25 ``deep learning transformer'' + filter year=2023},label={lst:bm25-query}]
+GET /arxiv_papers/_search
+{
+  "query": {
+    "bool": {
+      "must": [{
+        "multi_match": {
+          "query": "deep learning transformer",
+          "fields": ["title^2", "abstract"],
+          "type": "best_fields"
+        }
+      }],
+      "filter": [{ "term": { "year": "2023" } }]
+    }
+  },
+  "size": 3,
+  "_source": ["title", "year", "categories"]
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Kết quả trả về từ Elasticsearch (trích lược)},label={lst:bm25-result}]
+{
+  "took": 73,
+  "hits": {
+    "total": { "value": 7 },
+    "max_score": 9.794,
+    "hits": [
+      {
+        "_score": 9.794,
+        "_source": {
+          "title": "Domain Adaptation: Learning Bounds
+                    and Algorithms",
+          "categories": ["cs.LG", "cs.AI"],
+          "year": "2023"
+        }
+      },
+      {
+        "_score": 7.294,
+        "_source": {
+          "title": "rFerns: An Implementation of the
+                    Random Ferns Method for
+                    General-Purpose Machine Learning",
+          "categories": ["cs.LG", "stat.ML"],
+          "year": "2023"
+        }
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+Kết quả cho thấy hệ thống BM25 đã hoạt động chính xác: trả về 7 kết quả phù hợp với thời gian phản hồi \textbf{73ms}, các tài liệu được xếp hạng theo BM25 score giảm dần, và bộ lọc \texttt{year: 2023} được áp dụng đúng.
+
+% ===== HƯỚNG DẪN: Chụp screenshot Kibana Dev Tools với query search =====
+% Uncomment 3 dòng dưới khi đã có file ảnh:
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{kibana_search.png}
+\caption{Kibana Dev Tools -- Kết quả tìm kiếm BM25 với filter}
+\label{fig:kibana-search}
+\end{figure}
+
+\section{Các hạng mục tiếp theo (Next Steps)}
+Dựa trên nền tảng đã xây dựng, nhóm sẽ tiếp tục triển khai các tính năng nâng cao để hoàn thiện hệ thống Hybrid Search:
+\begin{itemize}
+    \item \textbf{Vector Embedding:} Sử dụng mô hình AI (pretrained models từ HuggingFace \cite{reimers2019sentencebert}) để chuyển đổi nội dung Title và Abstract thành dense vectors, bổ sung trường \texttt{dense\_vector} vào Index Mapping.
+    \item \textbf{kNN \& Hybrid Search:} Cấu hình tìm kiếm vector (kNN) trên Elasticsearch và tích hợp thuật toán RRF \cite{cormack2009rrf} để chạy song song cùng BM25, hợp nhất kết quả từ hai luồng tìm kiếm.
+    \item \textbf{Giao diện người dùng (UI):} Xây dựng ứng dụng web bằng Streamlit để người dùng có thể tương tác trực quan với hệ thống (nhập query, chọn chế độ tìm kiếm, xem kết quả).
+    \item \textbf{Đánh giá mô hình (Evaluation):} Xây dựng bộ truy vấn thử nghiệm và áp dụng các thang đo chuẩn trong Information Retrieval (như NDCG, MRR) để chứng minh tính hiệu quả của Hybrid Search so với Keyword Search thuần túy.
+\end{itemize}

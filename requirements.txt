@@ -1,0 +1,8 @@
+pandas==2.2.1
+elasticsearch==8.12.1
+tqdm==4.66.2
+sentence-transformers
+torch
+matplotlib
+streamlit
+plotly

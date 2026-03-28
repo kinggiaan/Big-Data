@@ -1,0 +1,3 @@
+# Chuẩn hóa xuống dòng khi clone giữa Windows/Linux
+* text=auto
+*.sh text eol=lf

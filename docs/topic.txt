@@ -1,0 +1,72 @@
+B u i l d i n g  a  H y b r i d  S e a r c h  S y s t e m
+f o r  A c a d e m i c  D o c u m e n t s  u s i n g
+E l a s t i c s e a r c h
+T e a m  m e m b e rD ư ơ n g  G i a  A n                -   2 4 7 0 2 9 3
+T r ị n h  S ơ n  L â m               -   2 4 7 0 2 8 7
+N g u y ễ n  T h a n h  H u y ề n   -   2 5 7 0 4 1 6C o u r s e C O 5 1 3 5  -  B i g  D a t a
+G r o u p  1 1
+Project Topic
+Building a Hybrid Search System for Academic Documents using Elasticsearch
+C o n t e x t
+E f f i c i e n t  a c a d e m i c  d o c u m e n t
+s e a r c h  i s  e s s e n t i a l  f o r
+s t u d e n t s  a n d  r e s e a r c h e r s .
+T r a d i t i o n a l  s e a r c h  s y s t e m s
+r e v e a l  m a n y  l i m i t a t i o n s  w h e n
+h a n d l i n g  m a s s i v e  v o l u m e s  o f
+d a t a .O b j e c t i v e
+A p p l y  a  H y b r i d  S e a r c h
+a r c h i t e c t u r e  t o  d e l i v e r  t h e
+m o s t  a c c u r a t e  r e s u l t s ,
+p o s i t i o n i n g  E l a s t i c s e a r c h  a s
+t h e  c o r e  e n g i n e  s e a r c h  t o
+h a n d l e  b o t h  t e x t  a n d  v e c t o r
+d a t a  s e a m l e s s l yCore Technology
+C o r e  T e c h n o l o g y
+E l a s t i c s e a r c h  ( 8 . x  s e r i e s ) .  W e
+l e v e r a g e  i t s  m o d e r n
+" R e t r i e v e r s "  A P I  a n d  b u i l t - i n
+R e c i p r o c a l  R a n k  F u s i o n  ( R R F )
+a l g o r i t h m  t o  o p t i m i z e  t h e
+e n t i r e  m u l t i - s t a g e  q u e r y
+p i p e l i n e  w i t h i n  a  s i n g l e
+p l a t f o r m
+
+Data Source
+Leveraging arXiv's comprehensive academic repository for hybrid search implementation.
+D a t a s e t
+a r X i v  o p e n - a c c e s s  a r c h i v e  f o r  s c h o l a r l y  a r t i c l e s
+S c a l e
+2 . 7 M +
+P A P E R S1 3 0
+D I S C I P L I N E S
+S p a n n i n g  C o m p u t e r  S c i e n c e ,  P h y s i c s ,  M a t h e m a t i c s ,  e t c .E X P L O I T E D  D A T A  S T R U C T U R E
+T i t l e  &  A b s t r a c t
+S t o r e d  a s  p l a i n  t e x t  a n d  d e n s e  v e c t o r s  t o  s e r v e
+d i f f e r e n t  s e a r c h  a l g o r i t h m s .
+M e t a d a t a
+P u b l i c a t i o n  Y e a r  a n d  C a t e g o r y  f i e l d s  u s e d  f o r  b u i l d i n g
+s t r i c t  f i l t e r s .
+h t t p s : / / w w w . k a g g l e . c o m / d a t a s e t s / C o r n e l l - U n i v e r s i t y / a r x i v
+Problems & Elasticsearch Solutions
+Addressing search limitations with advanced hybrid architecture capabilities.
+P R O B L E M  1 :  T H E  R I G I D I T Y  O F  K E Y W O R D  S E A R C H
+U s e r s  m u s t  t y p e  e x a c t  m a t c h e s ;  s y n o n y m s  o r
+r e p h r a s i n g  r e t u r n  z e r o  r e s u l t s .E L A S T I C S E A R C H  S O L U T I O N
+P r o v i d e s  V e c t o r  S e a r c h  ( k N N )  c a p a b i l i t i e s  t o  u n d e r s t a n d  t h e
+' c o n t e x t u a l  m e a n i n g '  o f  t h e  q u e r y  r a t h e r  t h a n  j u s t  m a t c h i n g  w o r d  f o r
+w o r d .
+P R O B L E M  2 :  A I  M I S S E S  S P E C I A L I Z E D  T E R M I N O L O G Y
+A I  u n d e r s t a n d s  c o n t e x t  w e l l  b u t  i s  p o o r  a t  f i n d i n g  e x a c t
+a u t h o r  n a m e s  o r  r a r e  a c r o n y m s .E L A S T I C S E A R C H  S O L U T I O N
+R u n s  b o t h  s t r e a m s  i n  p a r a l l e l  ( H y b r i d  S e a r c h ) .  I t  n a t i v e l y  i n t e g r a t e s
+t h e  R e c i p r o c a l  R a n k  F u s i o n  ( R R F )  a l g o r i t h m  t o  a u t o m a t i c a l l y  s c o r e
+a n d  m e r g e  A I  a n d  k e y w o r d  r e s u l t s  w i t h  h i g h  p r e c i s i o n .
+P R O B L E M  3 :  S E A R C H  S K E W E D  B Y  M U L T I D I S C I P L I N A R Y  N O I S E
+A  s i n g l e  k e y w o r d  c a n  h a v e  m u l t i p l e  m e a n i n g s .  A p p l y i n g
+s t r i c t  f i l t e r s  ( y e a r ,  c a t e g o r y )  t o  A I  s y s t e m s  o f t e n  b r e a k s
+t h e  s e a r c h  s t r u c t u r e ,  c a u s i n g  m i s s i n g  r e s u l t s  o r  h i g h
+l a t e n c y .E L A S T I C S E A R C H  S O L U T I O N
+F e a t u r e s  a n  A u t o m a t i c  O p t i m i z a t i o n  f i l t e r i n g  m e c h a n i s m .  I t
+d y n a m i c a l l y  s w i t c h e s  b e t w e e n  s c a n n i n g  a l g o r i t h m s  b a s e d  o n  f i l t e r
+s t r i c t n e s s ,  e n s u r i n g  f a s t  a n d  a c c u r a t e  r e s p o n s e s .

@@ -1,0 +1,149 @@
+\chapter{Kiến trúc hệ thống (System Architecture)}
+
+\section{Sơ đồ luồng dữ liệu (Data Flow)}
+Quy trình xử lý dữ liệu của hệ thống trong giai đoạn hiện tại được thiết kế theo dạng đường ống (pipeline) tuyến tính, được minh họa trong Hình \ref{fig:data-flow}:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.6cm and 0.3cm,
+    box/.style={rectangle, draw, rounded corners, minimum height=1cm, minimum width=2.8cm, text centered, font=\small},
+    data/.style={box, fill=blue!15, text width=2.6cm},
+    process/.style={box, fill=orange!20, text width=2.6cm},
+    storage/.style={box, fill=green!15, text width=2.6cm},
+    user/.style={box, fill=red!12, text width=2.6cm},
+    arrow/.style={->, thick, >=stealth},
+    label/.style={font=\scriptsize\itshape, text=gray}
+]
+
+% Row 1: Data pipeline
+\node[data] (raw) {Raw Data\\{\scriptsize arXiv JSON 3GB+}};
+\node[process, right=of raw] (clean) {Data Cleaning\\{\scriptsize Python streaming}};
+\node[data, right=of clean] (json) {Clean JSON\\{\scriptsize 100k docs, 350MB}};
+\node[process, right=of json] (bulk) {Bulk Ingestion\\{\scriptsize batch 5,000}};
+\node[storage, right=of bulk] (es) {Elasticsearch\\{\scriptsize Inverted Index}};
+
+% Row 2: Query pipeline
+\node[user, below=1.2cm of raw] (user) {User Query\\{\scriptsize keyword + filter}};
+\node[process, right=of user] (qproc) {Query Processing\\{\scriptsize tokenize, analyze}};
+\node[process, right=of qproc] (bm25) {BM25 Retriever\\{\scriptsize scoring + ranking}};
+\node[process, right=of bm25] (filter) {Filter\\{\scriptsize year, category}};
+\node[user, right=of filter] (result) {Results\\{\scriptsize top-k ranked}};
+
+% Arrows - data pipeline
+\draw[arrow] (raw) -- (clean);
+\draw[arrow] (clean) -- (json);
+\draw[arrow] (json) -- (bulk);
+\draw[arrow] (bulk) -- (es);
+
+% Arrows - query pipeline
+\draw[arrow] (user) -- (qproc);
+\draw[arrow] (qproc) -- (bm25);
+\draw[arrow] (bm25) -- (filter);
+\draw[arrow] (filter) -- (result);
+
+% Connection between two pipelines
+\draw[arrow, dashed, blue!60] (es.south) -- ++(0,-0.35) -| (bm25.north);
+
+% Labels
+\node[label, above=0.15cm of clean] {data\_prep.py};
+\node[label, above=0.15cm of bulk] {index\_data.py};
+\node[label, below=0.15cm of qproc] {search.py};
+
+\end{tikzpicture}
+\caption{Sơ đồ luồng dữ liệu (Data Flow Pipeline) của hệ thống}
+\label{fig:data-flow}
+\end{figure}
+
+\noindent Quy trình bao gồm hai luồng chính:
+
+\textbf{Luồng nạp dữ liệu (Data Ingestion Pipeline):}
+\begin{enumerate}
+    \item \textbf{Raw Data:} Dữ liệu gốc định dạng JSON từ arXiv (3GB+, line-delimited).
+    \item \textbf{Data Cleaning:} Script Python đọc từng dòng (streaming), lọc bỏ các bản ghi lỗi, và trích xuất tập con 100,000 bài báo thuộc lĩnh vực Computer Science.
+    \item \textbf{Data Ingestion:} Dữ liệu sạch được đóng gói thành các batch 5,000 documents và gửi qua Elasticsearch Bulk API.
+    \item \textbf{Indexing \& Storage:} Elasticsearch phân tích văn bản (tokenization) và tạo Inverted Index cho các trường \texttt{text}, đồng thời lưu trữ nguyên bản các trường \texttt{keyword}.
+\end{enumerate}
+
+\textbf{Luồng truy vấn (Query Pipeline):}
+\begin{enumerate}
+    \item \textbf{User Query:} Người dùng nhập câu truy vấn từ khóa, kèm theo bộ lọc (năm, danh mục) nếu cần.
+    \item \textbf{Query Processing:} Hệ thống phân tích cú pháp (tokenize) câu truy vấn.
+    \item \textbf{BM25 Retrieval:} Đối chiếu với Inverted Index, tính điểm BM25 cho từng document.
+    \item \textbf{Filtering \& Ranking:} Áp dụng bộ lọc exact-match và trả về top-k kết quả được xếp hạng theo độ liên quan.
+\end{enumerate}
+
+\section{Kiến trúc hạ tầng (Infrastructure)}
+
+\subsection{Công nghệ sử dụng}
+\begin{itemize}
+    \item \textbf{Python 3.x:} Xử lý dữ liệu (Data Processing) và tương tác với Elasticsearch thông qua thư viện \texttt{elasticsearch-py}.
+    \item \textbf{Elasticsearch 8.12:} Search Engine cốt lõi, hỗ trợ Inverted Index, BM25 scoring, và filtering \cite{elasticsearch_docs}.
+    \item \textbf{Docker \& Docker Compose:} Đóng gói và triển khai toàn bộ hạ tầng (Elasticsearch + Kibana) trong các container độc lập \cite{docker_docs}.
+    \item \textbf{Kibana 8.12:} Giao diện quản trị và trực quan hóa dữ liệu, hỗ trợ Dev Tools để thử nghiệm truy vấn.
+\end{itemize}
+
+\subsection{Mô hình triển khai}
+Hệ thống được triển khai dưới dạng Single-node cluster trên môi trường Docker cục bộ, sử dụng cấu hình Docker Compose như sau:
+
+\begin{lstlisting}[caption={Docker Compose -- Elasticsearch \& Kibana},label={lst:docker-compose}]
+services:
+  elasticsearch:
+    image: elasticsearch:8.12.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: kibana:8.12.2
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+\end{lstlisting}
+
+\subsection{Đặc tính Big Data}
+Mặc dù chạy trên single-node, kiến trúc bên trong của Elasticsearch vẫn duy trì các khái niệm phân tán như \textbf{Index}, \textbf{Shard} (phân mảnh dữ liệu) và \textbf{Replica} (bản sao). Điều này cho phép hệ thống dễ dàng mở rộng (scale-out) bằng cách thêm các node mới vào cluster khi khối lượng dữ liệu tăng lên mức hàng triệu bài báo mà không cần thay đổi kiến trúc ứng dụng.
+
+\section{Index Mapping \& Bulk Strategy}
+
+\subsection{Mapping Definition}
+Lược đồ dữ liệu (Mapping) được định nghĩa tường minh để tối ưu hóa hiệu năng cho từng loại truy vấn:
+
+\begin{lstlisting}[caption={Elasticsearch Index Mapping},label={lst:mapping}]
+{
+  "mappings": {
+    "properties": {
+      "id":         { "type": "keyword" },
+      "title":      { "type": "text" },
+      "abstract":   { "type": "text" },
+      "categories": { "type": "keyword" },
+      "authors":    { "type": "text" },
+      "year":       { "type": "keyword" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  }
+}
+\end{lstlisting}
+
+Trong đó:
+\begin{itemize}
+    \item Các trường \texttt{title}, \texttt{abstract}, \texttt{authors} được map dưới dạng \texttt{text} -- Elasticsearch tự động thực hiện phân tích cú pháp (tokenization, lowercasing, stop-word removal) và xây dựng Inverted Index để phục vụ tìm kiếm BM25.
+    \item Các trường \texttt{id}, \texttt{year}, \texttt{categories} được map dưới dạng \texttt{keyword} -- lưu trữ nguyên bản, không qua phân tích, phục vụ exact-match filtering với tốc độ O(1).
+\end{itemize}
+
+\subsection{Bulk Indexing Strategy}
+Thay vì gửi từng tài liệu qua HTTP POST riêng lẻ (rất chậm và tốn tài nguyên mạng), hệ thống sử dụng hàm \texttt{helpers.bulk()} của thư viện \texttt{elasticsearch-py}. Dữ liệu được gom thành các lô (batch) với kích thước \textbf{5,000 documents} mỗi lần gửi, giúp:
+\begin{itemize}
+    \item Giảm số lượng HTTP round-trip từ 100,000 xuống còn 20 requests.
+    \item Tối ưu hóa băng thông mạng và giảm tải cho bộ nhớ heap của Elasticsearch.
+    \item Toàn bộ 100,000 documents được index trong vòng vài chục giây.
+\end{itemize}

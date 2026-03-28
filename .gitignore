@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling indexes (regenerate with npx gitnexus analyze)
+.gitnexus/
+
+# SpecStory / local chat artifacts
+.specstory/
+
+# Logs
+*.log
+
+# Data directory: see data/.gitignore (large/generated files stay local)

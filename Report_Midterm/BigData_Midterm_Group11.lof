@@ -1,0 +1,11 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1.1}{\ignorespaces Sơ đồ luồng dữ liệu (Data Flow Pipeline) của hệ thống}}{12}{figure.caption.8}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1.1}{\ignorespaces Docker containers đang chạy Elasticsearch 8.12 và Kibana}}{16}{figure.caption.9}%
+\contentsline {figure}{\numberline {6.1.2}{\ignorespaces Kibana Dev Tools -- Kết quả xác nhận 100,000 documents đã được index}}{17}{figure.caption.10}%
+\contentsline {figure}{\numberline {6.1.3}{\ignorespaces Kibana Dev Tools -- Kết quả tìm kiếm BM25 với filter}}{20}{figure.caption.11}%
+\addvspace {10\p@ }

@@ -1,0 +1,24 @@
+\chapter{Kết luận tạm thời}
+
+\section{Tóm tắt kết quả đạt được}
+Tính đến thời điểm báo cáo giữa kỳ, nhóm đã hoàn thành toàn bộ Phase 1 của dự án, bao gồm:
+\begin{itemize}
+    \item Triển khai thành công hạ tầng Elasticsearch 8.12 + Kibana trên Docker.
+    \item Xử lý và làm sạch tập dữ liệu 3GB+ thành subset 100,000 bài báo CS bằng kỹ thuật streaming.
+    \item Lập chỉ mục toàn bộ 100,000 documents vào Elasticsearch qua Bulk API.
+    \item Xây dựng và kiểm thử thành công hệ thống tìm kiếm BM25 baseline với khả năng kết hợp filter.
+\end{itemize}
+
+\section{Đánh giá tính khả thi}
+Dự án hiện tại đang bám sát tiến độ mà nhóm đề ra. Việc thu hẹp phạm vi xuống 100,000 bài báo cho giai đoạn Midterm giúp nhóm kiểm soát tốt tài nguyên phần cứng (RAM/CPU) khi chạy Elasticsearch trên Docker cục bộ, đồng thời vẫn thể hiện được tư duy xử lý Big Data thông qua Bulk API và kiến trúc phân tán (Sharding).
+
+Hệ thống BM25 baseline đã chạy ổn định và cho kết quả trả về hợp lý trên nhiều loại truy vấn khác nhau (general search, filtered search, specialized terminology). Đây là nền tảng vững chắc để tiến hành đối chứng (benchmarking) khi tích hợp thêm Vector Search ở giai đoạn tiếp theo.
+
+\section{Bước tiếp theo}
+Ngay sau khi hoàn thành báo cáo giữa kỳ, nhóm sẽ tiến hành:
+\begin{enumerate}
+    \item Nghiên cứu thư viện \texttt{SentenceTransformers} \cite{reimers2019sentencebert} để tạo Vector Embeddings cho 100,000 bài báo.
+    \item Mở rộng Index Mapping để hỗ trợ trường \texttt{dense\_vector} cho kNN search.
+    \item Tích hợp thuật toán Reciprocal Rank Fusion (RRF) \cite{cormack2009rrf} để kết hợp kết quả BM25 và kNN.
+    \item Xây dựng giao diện Streamlit và bộ đánh giá NDCG/MRR.
+\end{enumerate}

@@ -1,0 +1,42 @@
+\contentsline {chapter}{Contribution}{}{chapter*.3}%
+\contentsline {section}{List of Figures}{i}{chapter*.4}%
+\contentsline {chapter}{\numberline {1}Giới thiệu (Introduction)}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Bối cảnh vấn đề}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Mục tiêu dự án}{2}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Phạm vi (Scope)}{2}{section.1.3}%
+\contentsline {chapter}{\numberline {2}Dataset (Dữ liệu)}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Nguồn dữ liệu}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Quy mô và Đặc điểm}{4}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Cấu trúc dữ liệu khai thác}{4}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Quy trình làm sạch dữ liệu (Data Cleaning)}{5}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Vấn đề và Giải pháp (Problems \& Proposed Solutions)}{7}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Problem 1: Sự cứng nhắc của tìm kiếm từ khóa (The Rigidity of Keyword Search)}{7}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Problem 2: AI bỏ sót các thuật ngữ chuyên ngành (AI Misses Specialized Terminology)}{7}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Problem 3: Nhiễu tìm kiếm đa ngành (Search Skewed by Multidisciplinary Noise)}{7}{section.3.3}%
+\contentsline {chapter}{\numberline {4}Cơ sở lý thuyết (Theoretical Background)}{9}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Information Retrieval Pipeline}{9}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Inverted Index và Thuật toán BM25}{9}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Field Types trong Elasticsearch}{10}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Vector Embedding và k-Nearest Neighbors (kNN)}{11}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Reciprocal Rank Fusion (RRF)}{11}{section.4.5}%
+\contentsline {chapter}{\numberline {5}Kiến trúc hệ thống (System Architecture)}{12}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Sơ đồ luồng dữ liệu (Data Flow)}{12}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Kiến trúc hạ tầng (Infrastructure)}{13}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Công nghệ sử dụng}{13}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Mô hình triển khai}{13}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Đặc tính Big Data}{14}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Index Mapping \& Bulk Strategy}{14}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Mapping Definition}{14}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Bulk Indexing Strategy}{15}{subsection.5.3.2}%
+\contentsline {chapter}{\numberline {6}Hiện trạng triển khai (Current Progress)}{16}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Các hạng mục đã hoàn thành}{16}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Thiết lập hạ tầng (Infrastructure Setup)}{16}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Tiền xử lý dữ liệu (Data Engineering)}{16}{subsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.1.3}Lập chỉ mục (Bulk Indexing)}{17}{subsection.6.1.3}%
+\contentsline {subsection}{\numberline {6.1.4}Truy vấn cơ sở (Baseline BM25 Search)}{17}{subsection.6.1.4}%
+\contentsline {section}{\numberline {6.2}Các hạng mục tiếp theo (Next Steps)}{20}{section.6.2}%
+\contentsline {chapter}{\numberline {7}Kết luận tạm thời}{22}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Tóm tắt kết quả đạt được}{22}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Đánh giá tính khả thi}{22}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Bước tiếp theo}{22}{section.7.3}%
+\contentsline {chapter}{References}{24}{chapter*.12}%
