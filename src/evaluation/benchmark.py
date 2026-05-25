@@ -1,6 +1,10 @@
 """
 Scalability benchmark: measure indexing time, index size, query latency
-across BM25, kNN, and Hybrid modes on the arxiv_papers_v2 index.
+across BM25, kNN, and Hybrid modes using the dual-index architecture.
+
+- BM25 queries  → INDEX_TEXT   (arxiv_text, metadata only)
+- kNN queries   → INDEX_VECTORS (arxiv_vectors → arxiv_bench, embeddings)
+- Hybrid (RRF)  → both indices
 
 Usage: .\venv\Scripts\python.exe src\benchmark.py
 """
@@ -15,8 +19,11 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
-ES_URL = "http://localhost:9200"
-INDEX_NAME = "arxiv_papers_v2"
+from src.config import (
+    ES_URL, INDEX_TEXT, INDEX_VECTORS, INDEX_V1,
+    MODEL_NAME, TITLE_BOOST, RESULT_SIZE, NUM_CANDIDATES, RRF_K,
+)
+
 OUTPUT_FILE = "data/benchmark_results.json"
 
 TEST_QUERIES = [
@@ -51,20 +58,20 @@ def percentile(data, p):
     return s[f] + (k - f) * (s[c] - s[f])
 
 
-def measure_bm25(es, queries, index, size=10):
+def measure_bm25(es, queries, index, size=RESULT_SIZE):
     latencies = []
     for q in queries:
         start = time.perf_counter()
         es.search(
             index=index,
-            query={"multi_match": {"query": q, "fields": ["title^2", "abstract"]}},
+            query={"multi_match": {"query": q, "fields": [f"title^{TITLE_BOOST}", "abstract"]}},
             size=size,
         )
         latencies.append((time.perf_counter() - start) * 1000)
     return latencies
 
 
-def measure_knn(es, model, queries, index, size=10, num_candidates=50):
+def measure_knn(es, model, queries, index, size=RESULT_SIZE, num_candidates=NUM_CANDIDATES):
     latencies = []
     for q in queries:
         vec = model.encode(q, normalize_embeddings=True).tolist()
@@ -78,28 +85,27 @@ def measure_knn(es, model, queries, index, size=10, num_candidates=50):
     return latencies
 
 
-def measure_hybrid(es, model, queries, index, size=10):
+def measure_hybrid(es, model, queries, index_text, index_vectors, size=RESULT_SIZE):
     latencies = []
     for q in queries:
         vec = model.encode(q, normalize_embeddings=True).tolist()
         start = time.perf_counter()
         bm25_resp = es.search(
-            index=index,
-            query={"multi_match": {"query": q, "fields": ["title^2", "abstract"]}},
+            index=index_text,
+            query={"multi_match": {"query": q, "fields": [f"title^{TITLE_BOOST}", "abstract"]}},
             size=20,
         )
         knn_resp = es.search(
-            index=index,
-            knn={"field": "embedding", "query_vector": vec, "k": 20, "num_candidates": 100},
+            index=index_vectors,
+            knn={"field": "embedding", "query_vector": vec, "k": 20, "num_candidates": NUM_CANDIDATES},
             size=20,
         )
         # RRF merge (included in latency)
         scores = {}
-        k_const = 60
         for rank, hit in enumerate(bm25_resp["hits"]["hits"], 1):
-            scores[hit["_id"]] = scores.get(hit["_id"], 0) + 1.0 / (k_const + rank)
+            scores[hit["_id"]] = scores.get(hit["_id"], 0) + 1.0 / (RRF_K + rank)
         for rank, hit in enumerate(knn_resp["hits"]["hits"], 1):
-            scores[hit["_id"]] = scores.get(hit["_id"], 0) + 1.0 / (k_const + rank)
+            scores[hit["_id"]] = scores.get(hit["_id"], 0) + 1.0 / (RRF_K + rank)
         sorted(scores.items(), key=lambda x: x[1], reverse=True)[:size]
         latencies.append((time.perf_counter() - start) * 1000)
     return latencies
@@ -118,7 +124,8 @@ def lat_stats(latencies):
 
 def get_index_info(es, index):
     stats = es.indices.stats(index=index)
-    idx = stats["indices"][index]
+    # stats["indices"] contains actual index names (not aliases), so we get the first value
+    idx = list(stats["indices"].values())[0]
     return {
         "doc_count": idx["total"]["docs"]["count"],
         "size_bytes": idx["total"]["store"]["size_in_bytes"],
@@ -145,19 +152,20 @@ def main():
         return
 
     print("Loading embedding model...")
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer(MODEL_NAME)
     print(f"Device: {model.device}\n")
 
     print("=" * 70)
-    print("  BENCHMARK: arxiv_papers_v2")
+    print(f"  BENCHMARK: dual-index ({INDEX_TEXT} + {INDEX_VECTORS})")
     print("=" * 70)
 
     # Index info
     print("\n[1/5] Index Statistics")
     print("-" * 50)
-    idx_info = get_index_info(es, INDEX_NAME)
-    print(f"  Documents:  {idx_info['doc_count']:,}")
-    print(f"  Index size: {idx_info['size_mb']} MB")
+    text_info = get_index_info(es, INDEX_TEXT)
+    print(f"  [{INDEX_TEXT}] Documents: {text_info['doc_count']:,}  Size: {text_info['size_mb']} MB")
+    vec_info = get_index_info(es, INDEX_VECTORS)
+    print(f"  [{INDEX_VECTORS}] Documents: {vec_info['doc_count']:,}  Size: {vec_info['size_mb']} MB")
 
     # JVM
     print("\n[2/5] JVM / Heap")
@@ -170,49 +178,51 @@ def main():
     print("\n[3/5] Warming up (5 queries each mode)...")
     print("-" * 50)
     for q in TEST_QUERIES[:5]:
-        es.search(index=INDEX_NAME, query={"match": {"title": q}}, size=1)
+        es.search(index=INDEX_TEXT, query={"match": {"title": q}}, size=1)
         vec = model.encode(q, normalize_embeddings=True).tolist()
-        es.search(index=INDEX_NAME, knn={"field": "embedding", "query_vector": vec, "k": 1, "num_candidates": 10}, size=1)
+        es.search(index=INDEX_VECTORS, knn={"field": "embedding", "query_vector": vec, "k": 1, "num_candidates": 10}, size=1)
     print("  Done")
 
     # BM25 benchmark
     print(f"\n[4/5] Query Latency ({len(TEST_QUERIES)} queries × 3 modes)")
     print("-" * 50)
 
-    print("  Running BM25...")
-    bm25_lats = measure_bm25(es, TEST_QUERIES, INDEX_NAME)
+    print(f"  Running BM25 on {INDEX_TEXT}...")
+    bm25_lats = measure_bm25(es, TEST_QUERIES, INDEX_TEXT)
     bm25_stats = lat_stats(bm25_lats)
     print(f"    Avg={bm25_stats['avg_ms']}ms  P50={bm25_stats['p50_ms']}ms  P95={bm25_stats['p95_ms']}ms")
 
-    print("  Running kNN...")
-    knn_lats = measure_knn(es, model, TEST_QUERIES, INDEX_NAME)
+    print(f"  Running kNN on {INDEX_VECTORS}...")
+    knn_lats = measure_knn(es, model, TEST_QUERIES, INDEX_VECTORS)
     knn_stats = lat_stats(knn_lats)
     print(f"    Avg={knn_stats['avg_ms']}ms  P50={knn_stats['p50_ms']}ms  P95={knn_stats['p95_ms']}ms")
 
-    print("  Running Hybrid (BM25 + kNN + RRF)...")
-    hyb_lats = measure_hybrid(es, model, TEST_QUERIES, INDEX_NAME)
+    print(f"  Running Hybrid (BM25 + kNN + RRF) on {INDEX_TEXT} + {INDEX_VECTORS}...")
+    hyb_lats = measure_hybrid(es, model, TEST_QUERIES, INDEX_TEXT, INDEX_VECTORS)
     hyb_stats = lat_stats(hyb_lats)
     print(f"    Avg={hyb_stats['avg_ms']}ms  P50={hyb_stats['p50_ms']}ms  P95={hyb_stats['p95_ms']}ms")
 
     # Compare with v1 if exists
     v1_info = None
     v1_bm25_stats = None
-    if es.indices.exists(index="arxiv_papers"):
-        print("\n[5/5] Comparing with v1 (text-only index)")
+    if es.indices.exists(index=INDEX_V1):
+        print(f"\n[5/5] Comparing with v1 ({INDEX_V1}, text-only index)")
         print("-" * 50)
-        v1_info = get_index_info(es, "arxiv_papers")
+        v1_info = get_index_info(es, INDEX_V1)
         print(f"  v1 docs: {v1_info['doc_count']:,}  |  v1 size: {v1_info['size_mb']} MB")
-        v1_bm25_lats = measure_bm25(es, TEST_QUERIES, "arxiv_papers")
+        v1_bm25_lats = measure_bm25(es, TEST_QUERIES, INDEX_V1)
         v1_bm25_stats = lat_stats(v1_bm25_lats)
         print(f"  v1 BM25: Avg={v1_bm25_stats['avg_ms']}ms  P50={v1_bm25_stats['p50_ms']}ms  P95={v1_bm25_stats['p95_ms']}ms")
     else:
-        print("\n[5/5] v1 index not found, skipping comparison")
+        print(f"\n[5/5] v1 index ({INDEX_V1}) not found, skipping comparison")
 
     # Save results
     results = {
         "timestamp": datetime.now().isoformat(),
-        "index": INDEX_NAME,
-        "index_info": idx_info,
+        "index_text": INDEX_TEXT,
+        "index_vectors": INDEX_VECTORS,
+        "index_info_text": text_info,
+        "index_info_vectors": vec_info,
         "jvm": jvm,
         "num_queries": len(TEST_QUERIES),
         "bm25": bm25_stats,

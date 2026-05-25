@@ -1,0 +1,32 @@
+\chapter{Kết luận và Hướng phát triển (Conclusion \& Future Work)}
+\label{ch:conclusion}
+
+\section{Kết quả Đạt được của Dự án}
+Trải qua quá trình nghiên cứu lý thuyết Big Data và thực nghiệm xây dựng hệ thống tìm kiếm kết hợp (Hybrid Search) trên tập dữ liệu học thuật quy mô lớn arXiv, nhóm dự án đã hoàn thành đầy đủ các mục tiêu đề ra ban đầu:
+\begin{enumerate}
+    \item \textbf{Đường ống Xử lý Dữ liệu lớn (Big Data Pipeline):} Thiết lập quy trình thu thập, xử lý và làm sạch dữ liệu thành công từ tệp JSON thô lớn (~4.8GB). Thiết kế bộ đọc luồng (streaming) giúp lọc sạch và xử lý chính xác hơn 1.2 triệu bài báo thuộc lĩnh vực Khoa học Máy tính mà không xảy ra hiện tượng tràn bộ nhớ.
+    \item \textbf{Tăng tốc Phần cứng (GPU-accelerated Embeddings):} Triển khai quy trình sinh vector nhúng (vector embeddings) sử dụng GPU Tesla T4 trên môi trường đám mây Google Colab. Giải quyết bài toán tràn cửa sổ ngữ cảnh ngữ nghĩa (256 tokens) thông qua thuật toán cắt Abstract thông minh tại các ranh giới câu hoàn chỉnh. Đạt tốc độ xử lý vượt trội (~800 docs/sec), hoàn thành việc mã hóa 1.2 triệu bài báo trong vòng 35 phút.
+    \item \textbf{Tối ưu hóa và Khai thác Tìm kiếm Kết hợp:} Đánh chỉ mục tối ưu trên Elasticsearch cục bộ với 2 shards và JVM Heap 4GB. Triển khai thành công thuật toán gộp thứ hạng RRF ở tầng ứng dụng, kết hợp sức mạnh đối khớp từ khóa BM25 và độ tương đồng khái niệm kNN Vector.
+    \item \textbf{Kiểm định và Đo đạc Thực nghiệm:} Xây dựng tập nhãn chuẩn Ground Truth cho 30 câu truy vấn (chia 3 nhóm cụ thể) dựa trên kỹ thuật Pooling và công cụ tự tạo \texttt{view\_candidates.py}. Thực hiện đo đạc so sánh chất lượng (NDCG@10, MRR@10) và hiệu năng (Latency P50/P95, Index Size) trên nhiều quy mô dữ liệu (100k, 500k, 1.2M), chứng minh chất lượng ưu việt của giải pháp Hybrid Search.
+    \item \textbf{Kiến trúc Dual-Index và Nạp dữ liệu gia tăng:} Nâng cấp hệ thống lên kiến trúc hai chỉ mục (\texttt{arxiv\_text} cho BM25 và \texttt{arxiv\_vectors} cho kNN) trên cùng một cụm Elasticsearch. Xây dựng cơ chế nạp bài báo mới (Incremental Ingestion) thông qua API endpoint \texttt{POST /api/ingest}, cho phép bổ sung bài báo mới vào cả hai chỉ mục trong thời gian thực mà không cần đánh chỉ mục lại toàn bộ 1.2 triệu bài báo.
+\end{enumerate}
+
+\section{Ưu điểm và Hạn chế Hiện tại của Hệ thống}
+
+\subsection{Ưu điểm}
+* **Độ chính xác cao và Ổn định:** Kết quả kiểm định NDCG@10 đạt mức cao và đồng đều trên tất cả các dạng truy vấn khác nhau (từ khóa chính xác lẫn ngôn ngữ tự nhiên khái niệm).
+* **Kiến trúc bền vững (Scalability):** Hệ thống được module hóa rõ ràng (data prep, embedding generation, indexer, search engine). Quá trình index dữ liệu sử dụng Bulk API giúp nạp hàng triệu tài liệu trong thời gian ngắn.
+* **Tối ưu hóa tài nguyên:** Giảm số phân mảnh (shards) xuống còn 2 giúp Elasticsearch vận hành nhẹ nhàng trên máy tính cá nhân 16GB RAM nhưng vẫn sẵn sàng mở rộng (scale-out) khi bổ sung thêm nodes vật lý.
+* **Hỗ trợ Nạp dữ liệu Gia tăng (Incremental Ingestion):** Kiến trúc Dual-Index cho phép bổ sung bài báo mới vào hệ thống mà không cần nạp lại toàn bộ tập dữ liệu, tiết kiệm đáng kể thời gian và tài nguyên.
+
+\subsection{Hạn chế}
+* **Độ trễ gộp thứ hạng:** Do giải thuật RRF được triển khai thủ công tại tầng ứng dụng (Python script) bằng cách gọi hai truy vấn tuần tự lên Elasticsearch qua kết nối mạng, độ trễ truy vấn Hybrid (54ms ở P50) vẫn cao hơn so với tìm kiếm BM25 đơn lẻ (14ms).
+* **Mô hình nhúng cơ bản:** Mô hình \texttt{all-MiniLM-L6-v2} (384 chiều) tuy có tốc độ sinh vector nhanh và kích thước nhỏ gọn nhưng khả năng biểu diễn ngữ nghĩa đối với các khái niệm khoa học chuyên sâu hoặc liên ngành đôi khi còn đơn giản so với các mô hình ngôn ngữ lớn (LLM) hiện đại.
+
+\section{Hướng phát triển trong Tương lai}
+Để khắc phục các hạn chế nêu trên và đưa hệ thống tiệm cận mức độ hoàn thiện thương mại, chúng tôi đề xuất các hướng nghiên cứu cải tiến sau:
+\begin{enumerate}
+    \item \textbf{Tích hợp RRF trực tiếp vào Elasticsearch DSL:} Cấu hình sử dụng các phiên bản Elasticsearch mới hỗ trợ tính năng RRF tích hợp sẵn ở mức native API. Điều này cho phép thực hiện việc truy vấn và gộp thứ hạng ngay bên trong Elasticsearch engine, giảm thiểu chi phí chuyển giao dữ liệu qua mạng và đưa độ trễ của Hybrid Search về sát mức của kNN đơn lẻ.
+    \item \textbf{Áp dụng Mô hình Tái xếp hạng (Cross-Encoder Re-ranking):} Sử dụng cấu trúc xếp hạng hai tầng (Two-stage Retrieval). Tầng 1 sử dụng Hybrid Search nhanh để lấy ra top 100 tài liệu ứng viên. Tầng 2 sử dụng một mô hình ngôn ngữ lớn mạnh mẽ hơn nhưng chậm hơn (như \texttt{cross-encoder/ms-marco-MiniLM-L-6-v2}) để chấm điểm lại mức độ tương quan chính xác cao của 100 ứng viên này trước khi hiển thị cho người dùng.
+    \item \textbf{Triển khai Đa nút (Multi-node Elasticsearch Cluster):} Đưa hệ thống lên môi trường Docker Swarm hoặc Kubernetes, triển khai tối thiểu 3 nodes vật lý với cơ chế Sharding và Replication thực tế để kiểm tra khả năng chịu lỗi (fault tolerance) và cân bằng tải (load balancing) trong môi trường dữ liệu quy mô lớn thực tế.
+\end{enumerate}

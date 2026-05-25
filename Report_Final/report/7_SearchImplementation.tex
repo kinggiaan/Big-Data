@@ -1,0 +1,97 @@
+\chapter{Triển khai Cơ chế Tìm kiếm và Xếp hạng (Search Implementation)}
+\label{ch:search-implementation}
+
+\section{Đánh Chỉ mục Tối ưu trên Elasticsearch (Indexing Optimization)}
+Để chuẩn bị môi trường cho việc tìm kiếm kết hợp Hybrid Search, chúng tôi tối ưu cấu hình chỉ mục (Index Settings) trên Elasticsearch phiên bản V2 (\texttt{arxiv\_papers\_v2}) nhằm thích ứng với tài nguyên giới hạn của hệ thống single-node (16GB RAM):
+\begin{itemize}
+    \item \textbf{Cấu hình Phân mảnh (Shard Settings):} Giảm số lượng phân mảnh chính từ 5 shards xuống còn \textbf{2 shards} và đặt số lượng replica bằng 0. Theo khuyến nghị của Elasticsearch, mỗi shard nên quản lý từ 20GB -- 40GB dữ liệu văn bản. Với tập dữ liệu CS full (~5.4GB), việc chia thành 2 shards giúp giảm thiểu đáng kể chi phí quản lý tài nguyên của JVM Heap trên một nút đơn, từ đó tăng tốc độ tính toán vector kNN.
+    \item \textbf{Cấu hình Tạm ngưng Cập nhật (Refresh Interval):} Trong quá trình nạp dữ liệu lớn (Bulk Ingestion), thuộc tính \texttt{refresh\_interval} được thiết lập bằng \texttt{"-1"} (tức là tắt hoàn toàn việc ghi phân đoạn Index tạm thời xuống đĩa). Sau khi quá trình nạp dữ liệu hoàn tất, thuộc tính này được bật lại về giá trị mặc định (\texttt{"1s"}) và gọi lệnh \texttt{\_forcemerge} để gộp các phân đoạn nhỏ lại làm tăng tốc độ tìm kiếm.
+    \item \textbf{Cấu hình Bộ nhớ Heap (Heap Memory):} Thiết lập tham số môi trường JVM: \texttt{ES\_JAVA\_OPTS="-Xms4g -Xmx4g"}. Kích thước Heap 4GB là tối thiểu để Elasticsearch có thể lưu trữ cấu trúc cây chỉ mục kNN (HNSW graph) của 1.2 triệu vectors 384 chiều trong bộ nhớ RAM mà không gây lỗi OutOfMemory.
+\end{itemize}
+
+\section{Truy vấn Tìm kiếm Từ khóa (BM25 Search)}
+Cú pháp truy vấn văn bản truyền thống sử dụng thuật toán điểm số BM25 để đo độ tương đồng văn bản dựa trên tần suất xuất hiện của từ khóa. 
+Cấu hình chi tiết câu truy vấn được thiết lập đồng nhất qua hệ thống cấu hình chung tại \texttt{src/config.py}:
+\begin{itemize}
+    \item \textbf{Trường tìm kiếm và Hệ số tăng cường (Fields \& Boosting):} Tìm kiếm trên hai trường \texttt{title} và \texttt{abstract}. Trong đó trường tiêu đề được áp dụng hệ số tăng cường trọng số là $2$ (\texttt{"title\^{}2"}) để ưu tiên những tài liệu có chứa từ khóa trực tiếp trên tiêu đề bài báo.
+    \item \textbf{Loại truy vấn (Query Type):} Sử dụng loại \texttt{"best\_fields"}. Loại truy vấn này sẽ tính điểm số dựa trên trường có độ liên quan cao nhất thay vì gộp chéo (\texttt{"cross\_fields"}), giúp tránh trường hợp các từ khóa xuất hiện rải rác nhưng không tập trung tạo nên điểm số ảo cao.
+\end{itemize}
+
+Cú pháp DSL truy vấn BM25 trong hệ thống được triển khai như sau:
+\begin{lstlisting}[caption={Elasticsearch BM25 Query DSL},label={lst:bm25-dsl}]
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "multi_match": {
+            "query": query_text,
+            "fields": ["title^2", "abstract"],
+            "type": "best_fields"
+          }
+        }
+      ]
+    }
+  },
+  "size": RESULT_SIZE
+}
+\end{lstlisting}
+
+\section{Truy vấn Tìm kiếm Vector tương đồng (kNN Search)}
+Tìm kiếm ngữ nghĩa (Semantic Search) được thực hiện bằng cách so khớp khoảng cách không gian giữa vector truy vấn và các vector tài liệu trong cơ sở dữ liệu Elasticsearch.
+\begin{itemize}
+    \item \textbf{Cơ chế mô hình:} Câu truy vấn văn bản thô từ người dùng được gửi qua mô hình \texttt{all-MiniLM-L6-v2} trên CPU cục bộ để chuyển đổi thành vector thực 384 chiều (độ dài vector được chuẩn hóa về đơn vị norm = 1.0).
+    \item \textbf{Định nghĩa chỉ mục kNN:} Trường \texttt{embedding} trong Elasticsearch được thiết lập sử dụng giải thuật HNSW (Hierarchical Navigable Small World) để tạo cấu trúc đồ thị tìm kiếm láng giềng gần nhất với hàm đo độ tương đồng Cosine (\texttt{similarity: "cosine"}).
+    \item \textbf{Ứng viên tìm kiếm (Search Candidates):} Thiết lập tham số \texttt{num\_candidates = 100} cho mỗi phân mảnh. Elasticsearch sẽ chọn ra 100 tài liệu có khoảng cách vector gần nhất trên từng shard (tổng cộng 200 ứng viên từ 2 shards) trước khi thực hiện sắp xếp lại và trả về top kết quả.
+\end{itemize}
+
+Cú pháp DSL truy vấn kNN trong hệ thống được triển khai như sau:
+\begin{lstlisting}[caption={Elasticsearch kNN Query DSL},label={lst:knn-dsl}]
+{
+  "knn": {
+    "field": "embedding",
+    "query_vector": query_vector,
+    "k": RESULT_SIZE,
+    "num_candidates": 100
+  },
+  "size": RESULT_SIZE
+}
+\end{lstlisting}
+
+\section{Truy vấn Kết hợp Hybrid Search dùng RRF}
+Để khắc phục nhược điểm của từng phương pháp tìm kiếm độc lập (BM25 bỏ sót các từ đồng nghĩa; kNN vector đôi khi bỏ sót các từ khóa chuyên ngành viết tắt chính xác), hệ thống triển khai cơ chế tìm kiếm kết hợp \textbf{Hybrid Search} sử dụng giải thuật gộp thứ hạng \textbf{Reciprocal Rank Fusion (RRF)}.
+
+Thuật toán RRF xếp hạng lại các tài liệu dựa trên vị trí (thứ hạng) của chúng trong các danh sách kết quả trả về riêng lẻ thay vì cộng trực tiếp điểm số (vì điểm BM25 và điểm Cosine kNN có thang đo hoàn toàn khác nhau). 
+Điểm số RRF của tài liệu $d$ được tính theo công thức:
+\begin{equation}
+RRF\_Score(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $M$ là tập hợp các phương pháp tìm kiếm ($M = \{\text{BM25}, \text{kNN}\}$).
+    \item $r_m(d)$ là thứ hạng (vị trí từ 1 trở đi) của tài liệu $d$ trong danh sách kết quả của phương pháp $m$. Nếu tài liệu không nằm trong danh sách kết quả, thứ hạng coi như bằng vô cùng ($\infty$) và số hạng tương ứng bằng 0.
+    \item $k$ là hằng số làm mịn, giúp giảm thiểu tầm ảnh hưởng của các tài liệu có thứ hạng cực kỳ cao. Chúng tôi thiết lập $k = 60$ theo các thực nghiệm chuẩn mực \cite{cormack2009rrf}.
+\end{itemize}
+
+Thuật toán gộp thứ hạng RRF được lập trình trực tiếp bằng mã Python tại file \texttt{src/search/hybrid\_search.py}:
+\begin{enumerate}
+    \item Thực hiện gọi song song truy vấn BM25 lên chỉ mục \texttt{arxiv\_text} và truy vấn kNN lên chỉ mục \texttt{arxiv\_vectors} với kích thước tập ứng viên lấy về là \texttt{RRF\_FETCH\_SIZE = 30}.
+    \item Trích xuất danh sách ID tài liệu từ hai kết quả trả về.
+    \item Áp dụng công thức tính điểm RRF cho từng ID xuất hiện trong ít nhất một danh sách.
+    \item Sắp xếp lại danh sách tài liệu theo điểm RRF giảm dần và trả về top \texttt{RESULT\_SIZE = 10} kết quả cuối cùng cho người dùng.
+    \item Việc lập trình gộp RRF ở tầng ứng dụng (application layer) giúp chúng tôi hoàn toàn kiểm soát được thuật toán và dễ dàng tùy biến cấu hình mà không phụ thuộc vào các tính năng trả phí hoặc giới hạn phiên bản của Elasticsearch.
+\end{enumerate}
+
+\section{Kiến trúc Dual-Index cho Hybrid Search}
+Trong phiên bản cải tiến, hệ thống tách biệt các chỉ mục theo chức năng:
+\begin{itemize}
+    \item Truy vấn BM25 được gửi đến chỉ mục \texttt{arxiv\_text} --- chỉ chứa văn bản, không có vector nhúng.
+    \item Truy vấn kNN được gửi đến chỉ mục \texttt{arxiv\_vectors} --- chứa cả metadata và vector nhúng 384 chiều.
+    \item Sau khi gộp thứ hạng RRF, các tài liệu chỉ xuất hiện trong kết quả kNN sẽ được bổ sung metadata từ \texttt{arxiv\_text} thông qua lệnh \texttt{es.mget()} (Multi-Get API).
+\end{itemize}
+
+Kiến trúc này mang lại hai ưu điểm chính:
+\begin{enumerate}
+    \item \textbf{Tối ưu kích thước:} Index \texttt{arxiv\_text} chỉ 1.5GB (so với 10.4GB khi lưu cả vector), giảm áp lực bộ nhớ JVM Heap cho các truy vấn BM25.
+    \item \textbf{Hỗ trợ nạp dữ liệu gia tăng:} Bài báo mới chỉ cần đẩy vào cả hai index qua API, không cần đánh chỉ mục lại toàn bộ tập dữ liệu.
+\end{enumerate}

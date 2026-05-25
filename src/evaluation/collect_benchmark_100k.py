@@ -10,7 +10,9 @@ import time
 import statistics
 from elasticsearch import Elasticsearch
 
-es = Elasticsearch("http://localhost:9200")
+from src.config import ES_URL, INDEX_V1
+
+es = Elasticsearch(ES_URL)
 
 TEST_QUERIES = [
     "deep learning",
@@ -49,7 +51,7 @@ def measure_bm25_latency(queries):
             }
         }
         start = time.perf_counter()
-        es.search(index="arxiv_papers", body=body)
+        es.search(index=INDEX_V1, body=body)
         elapsed_ms = (time.perf_counter() - start) * 1000
         latencies.append(elapsed_ms)
     return latencies
@@ -105,7 +107,7 @@ def main():
 
     print("\n[1/3] Index Statistics")
     print("-" * 40)
-    stats = get_index_stats("arxiv_papers")
+    stats = get_index_stats(INDEX_V1)
     if "error" in stats:
         print(f"  Error: {stats['error']}")
         return
@@ -126,7 +128,7 @@ def main():
     # Warm up
     print("  Warming up (5 queries)...")
     for q in TEST_QUERIES[:5]:
-        es.search(index="arxiv_papers", body={"size": 1, "query": {"match": {"title": q}}})
+        es.search(index=INDEX_V1, body={"size": 1, "query": {"match": {"title": q}}})
 
     latencies = measure_bm25_latency(TEST_QUERIES)
     p50 = percentile(latencies, 50)

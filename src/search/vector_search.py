@@ -1,8 +1,9 @@
 """
 Vector (kNN) search on Elasticsearch using dense_vector embeddings.
-Encodes the query text on-the-fly, then runs a kNN search on the arxiv_papers_v2 index.
+Encodes the query text on-the-fly, then runs a kNN search on INDEX_VECTORS.
+Metadata (title, year, authors, abstract) is fetched from INDEX_TEXT via mget.
 
-Usage: .\venv\Scripts\python.exe src\vector_search.py
+Usage: ./venv/bin/python src/search/vector_search.py
 """
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
@@ -11,15 +12,16 @@ import time
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
-es = Elasticsearch("http://localhost:9200")
-INDEX_NAME = "arxiv_papers_v2"
+from src.config import INDEX_VECTORS, INDEX_TEXT, ES_URL, MODEL_NAME
+
+es = Elasticsearch(ES_URL)
 
 print("Loading embedding model...")
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = SentenceTransformer(MODEL_NAME)
 print(f"Model ready (device: {model.device})\n")
 
 
-def vector_search(query_text, size=5, num_candidates=50):
+def vector_search(query_text, size=5, num_candidates=100):
     """kNN search using cosine similarity on dense_vector field."""
     print(f"\n--- VECTOR (kNN) SEARCH: '{query_text}' ---")
 
@@ -27,7 +29,7 @@ def vector_search(query_text, size=5, num_candidates=50):
 
     start = time.perf_counter()
     response = es.search(
-        index=INDEX_NAME,
+        index=INDEX_VECTORS,
         knn={
             "field": "embedding",
             "query_vector": query_vector,
@@ -35,16 +37,35 @@ def vector_search(query_text, size=5, num_candidates=50):
             "num_candidates": num_candidates,
         },
         size=size,
-        _source=["title", "year", "authors", "abstract"],
+        _source=False,  # INDEX_VECTORS has no metadata fields
     )
-    latency = (time.perf_counter() - start) * 1000
 
     hits = response["hits"]["hits"]
+
+    # Fetch metadata from INDEX_TEXT via mget
+    if hits:
+        doc_ids = [hit["_id"] for hit in hits]
+        meta_resp = es.mget(
+            index=INDEX_TEXT,
+            body={"ids": doc_ids},
+            _source=["title", "year", "authors", "abstract"],
+        )
+        meta_map = {}
+        for doc in meta_resp["docs"]:
+            if doc.get("found"):
+                meta_map[doc["_id"]] = doc["_source"]
+
+        # Merge metadata into kNN results
+        for hit in hits:
+            hit["_source"] = meta_map.get(hit["_id"], {})
+
+    latency = (time.perf_counter() - start) * 1000
+
     print(f"Results: {len(hits)} | Latency: {latency:.0f}ms")
 
     for i, hit in enumerate(hits, 1):
         score = hit["_score"]
-        src = hit["_source"]
+        src = hit.get("_source", {})
         title = src.get("title", "N/A")
         year = src.get("year", "N/A")
         abstract = src.get("abstract", "")[:120]
@@ -64,4 +85,3 @@ if __name__ == "__main__":
     vector_search("training robots with reward-based algorithms")
     vector_search("efficient attention mechanism for long sequences")
     vector_search("BERT")
-

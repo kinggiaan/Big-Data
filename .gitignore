@@ -31,6 +31,14 @@ Thumbs.db
 # Local tooling indexes (regenerate with npx gitnexus analyze)
 .gitnexus/
 
+# Wrangler local state
+.wrangler/
+
+# AI assistant configs
+.claude/
+.cursor/
+.cursorindexingignore
+
 # SpecStory / local chat artifacts
 .specstory/
 
@@ -38,3 +46,5 @@ Thumbs.db
 *.log
 
 # Data directory: see data/.gitignore (large/generated files stay local)
+node_modules/
+**/node_modules/

@@ -1,0 +1,60 @@
+\chapter{Cơ sở lý thuyết (Theoretical Background)}
+
+\section{Information Retrieval Pipeline}
+Với hệ thống truy xuất thông tin (Information Retrieval - IR), thay vì thực hiện thao tác rà soát tuần tự trên toàn bộ cơ sở dữ liệu vốn không khả thi với dữ liệu lớn, hệ thống IR hoạt động dựa trên một quy trình xử lý luồng (pipeline) khép kín. Quy trình này chịu trách nhiệm chuyển đổi khối lượng lớn dữ liệu phi cấu trúc thành các ma trận toán học và cấu trúc lưu trữ tối ưu, bao gồm ba giai đoạn chính:
+\begin{enumerate}
+    \item \textbf{Ingestion (Thu thập và làm sạch):} Dữ liệu thô từ nhiều nguồn được thu thập, tiến hành chuẩn hóa định dạng và loại bỏ các thành phần nhiễu giúp bóc tách và trích xuất các trường thông tin quan trọng nhằm tạo ra một tập dữ liệu đầu vào sạch, đáp ứng yêu cầu dữ liệu đầu vào cho các bước xử lý tiếp theo.
+    \item \textbf{Indexing (Lập chỉ mục):} Dữ liệu sau khi làm sạch được tổ chức thành các cấu trúc dữ liệu đặc biệt (như Inverted Index đối với văn bản) để tối ưu hóa tốc độ tìm kiếm.
+    \item \textbf{Query Processing (Xử lý truy vấn):} Hệ thống tiếp nhận câu truy vấn từ người dùng, phân tích (tokenize), và đối chiếu với chỉ mục để trả về các kết quả phù hợp nhất dựa trên thuật toán xếp hạng (ranking algorithm).
+\end{enumerate}
+
+\section{Inverted Index và Thuật toán BM25}
+Trong giai đoạn hiện tại, nhằm đáp ứng yêu cầu tìm kiếm với hiệu năng cao trên các tập dữ liệu lớn, hệ thống sử dụng các công nghệ tìm kiếm văn bản cốt lõi:
+\begin{itemize}
+    \item \textbf{Inverted Index (Chỉ mục đảo ngược):} Đây là cấu trúc dữ liệu nền tảng của Elasticsearch. Thay vì quét từng tài liệu để tìm từ khóa, Inverted Index lưu trữ một danh sách các từ khóa (terms) và ánh xạ mỗi từ khóa đến danh sách các tài liệu (documents) chứa nó. Điều này giúp tốc độ tìm kiếm đạt mức gần thời gian thực (near real-time) ngay cả với Big Data.
+    \item \textbf{BM25 (Best Matching 25):} Là thuật toán xếp hạng mặc định của Elasticsearch, được phát triển và cải tiến dựa trên nền tảng của mô hình trọng số TF-IDF (Term Frequency - Inverse Document Frequency) \cite{robertson2009bm25}. Thuật toán này giúp khai phá văn bản và truy xuất thông tin, đánh giá và xếp hạng độ liên quan của các tài liệu trả về so với câu truy vấn của người dùng dựa trên:
+    \begin{itemize}
+        \item \textbf{TF (Term Frequency):} Tần suất xuất hiện của từ khóa trong tài liệu. Tần suất càng cao, điểm số càng tăng, nhưng có giới hạn bão hòa để tránh việc lặp từ khóa quá mức.
+        \item \textbf{IDF (Inverse Document Frequency):} Độ hiếm của từ khóa trên toàn bộ tập dữ liệu. Các từ khóa xuất hiện trong ít tài liệu (như thuật ngữ chuyên ngành) sẽ có trọng số cao hơn so với các từ thông dụng (như "the", "a", "is").
+    \end{itemize}
+\end{itemize}
+
+\section{Field Types trong Elasticsearch}
+Elasticsearch phân biệt rõ ràng hai loại dữ liệu văn bản phục vụ cho các mục đích truy vấn khác nhau \cite{elasticsearch_docs}. Bảng \ref{tab:text-vs-keyword} tóm tắt sự khác biệt:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{3cm}|p{5.5cm}|p{5.5cm}|}
+\hline
+\textbf{Đặc điểm} & \textbf{\texttt{text}} & \textbf{\texttt{keyword}} \\ \hline
+\textbf{Phân tích cú pháp} & Có (tokenization, lowercasing, stop-word removal) & Không -- lưu nguyên bản \\ \hline
+\textbf{Cấu trúc lưu trữ} & Inverted Index (ánh xạ term $\to$ documents) & Doc Values (ánh xạ document $\to$ giá trị gốc) \\ \hline
+\textbf{Loại truy vấn} & Full-text search (BM25 scoring) & Exact-match, filtering, aggregation \\ \hline
+\textbf{Ví dụ trường} & \texttt{title}, \texttt{abstract}, \texttt{authors} & \texttt{year}, \texttt{categories}, \texttt{id} \\ \hline
+\textbf{Ví dụ truy vấn} & ``machine learning'' $\to$ khớp ``Machine Learning for...'' & ``2023'' $\to$ chỉ khớp chính xác ``2023'' \\ \hline
+\end{tabular}
+\caption{So sánh \texttt{text} và \texttt{keyword} field types trong Elasticsearch}
+\label{tab:text-vs-keyword}
+\end{table}
+
+Việc lựa chọn đúng field type cho từng trường dữ liệu là yếu tố then chốt ảnh hưởng trực tiếp đến hiệu năng tìm kiếm và tính chính xác của kết quả trả về.
+
+\section{Vector Embedding và k-Nearest Neighbors (kNN)}
+Để giải quyết hạn chế của tìm kiếm từ khóa truyền thống (chưa nắm bắt được quan hệ đồng nghĩa, ngữ cảnh ngữ nghĩa), hệ thống áp dụng các mô hình ngôn ngữ học sâu (như \texttt{SentenceTransformers} \cite{reimers2019sentencebert}) để chuyển đổi toàn bộ thông tin văn bản của bài báo thành các vector số thực mật độ cao (dense vectors). Khoảng cách không gian giữa các vector (ví dụ: độ tương đồng Cosine Similarity) phản ánh mức độ tương đồng về mặt khái niệm giữa các tài liệu.
+
+Tuy nhiên, việc tính toán khoảng cách k-Nearest Neighbors (kNN) chính xác trên tập dữ liệu lớn đòi hỏi phép quét tuyến tính $O(N)$ so sánh vector truy vấn với toàn bộ vector trong cơ sở dữ liệu. Điều này hoàn toàn bất khả thi đối với Big Data do độ trễ truy vấn quá cao. Để giải quyết rào cản này, Elasticsearch tích hợp giải thuật tìm kiếm láng giềng gần đúng **HNSW (Hierarchical Navigable Small World)** \cite{malkov2018hnsw}:
+\begin{itemize}
+    \item \textbf{Cấu trúc Đồ thị đa tầng (Hierarchical Graph):} HNSW xây dựng cấu trúc đồ thị đa lớp tương tự như danh sách liên kết nhảy (Skip Lists). Lớp trên cùng thưa thớt giúp định vị nhanh khu vực lân cận của vector đích, các lớp dưới dày đặc dần giúp thu hẹp phạm vi và tìm kiếm chính xác ở khoảng cách ngắn.
+    \item \textbf{Độ phức tạp tính toán:} Giải thuật chuyển độ phức tạp tìm kiếm kNN từ tuyến tính $O(N)$ về mức logarithm $O(\log N)$, cho phép tìm kiếm ngữ nghĩa trên hàng triệu tài liệu trong thời gian mili-giây.
+    \item \textbf{Cân bằng Trade-off:} Người dùng có thể cân bằng giữa tốc độ tìm kiếm và độ chính xác thu hồi (Recall) thông qua tham số \texttt{num\_candidates} khi truy vấn.
+\end{itemize}
+
+
+\section{Reciprocal Rank Fusion (RRF)}
+RRF là một thuật toán xếp hạng (ranking algorithm) kết hợp kết quả từ nhiều phương pháp tìm kiếm khác nhau (ở đây là BM25 và kNN) mà không cần phải chuẩn hóa điểm số (score) của chúng \cite{cormack2009rrf}. Công thức RRF tính điểm cho mỗi document $d$ dựa trên vị trí xếp hạng trong từng hệ thống:
+
+\[
+\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + r(d)}
+\]
+
+trong đó $R$ là tập các bảng xếp hạng (từ BM25 và kNN), $r(d)$ là vị trí của document $d$ trong bảng xếp hạng $r$, và $k$ là hằng số điều chỉnh (thường $k = 60$). Công thức này giúp đẩy các tài liệu xuất hiện ở thứ hạng cao trong cả hai phương pháp lên vị trí top đầu, mang lại kết quả tối ưu và chính xác nhất cho hệ thống Hybrid Search.

@@ -1,0 +1,17 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.3.1}{\ignorespaces Cấu trúc dữ liệu được lập chỉ mục vào Elasticsearch}}{5}{table.caption.7}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.3.1}{\ignorespaces So sánh \texttt {text} và \texttt {keyword} field types trong Elasticsearch}}{9}{table.caption.8}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {8.3.1}{\ignorespaces Bảng so sánh chất lượng tìm kiếm NDCG@10 và MRR@10 trên các nhóm truy vấn ở quy mô 1.2M}}{30}{table.caption.11}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {9.2.1}{\ignorespaces Bảng so sánh thời gian phản hồi (Latency) theo phân vị P50 và P95 (đơn vị: mili-giây)}}{34}{table.caption.13}%
+\contentsline {table}{\numberline {9.3.1}{\ignorespaces Dung lượng lưu trữ thực tế qua các quy mô dữ liệu}}{36}{table.caption.15}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {10.2.1}{\ignorespaces Các endpoint RESTful của FastAPI Backend}}{39}{table.caption.17}%
+\addvspace {10\p@ }

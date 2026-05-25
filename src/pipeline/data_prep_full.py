@@ -55,8 +55,19 @@ def extract_cs_papers():
                 skipped += 1
                 continue
 
-            update_date = record.get("update_date", "")
-            year = update_date.split("-")[0] if update_date else None
+            # Parse year from arXiv ID (more accurate than update_date)
+            arxiv_id = record.get("id", "")
+            year = None
+            if "." in arxiv_id:
+                prefix = arxiv_id.split(".")[0]
+                if "/" in prefix:
+                    prefix = prefix.split("/")[-1]
+                if len(prefix) == 4 and prefix.isdigit():
+                    yy = int(prefix[:2])
+                    year = str(2000 + yy) if yy < 90 else str(1900 + yy)
+            if year is None:
+                update_date = record.get("update_date", "")
+                year = update_date.split("-")[0] if update_date else None
 
             clean = {
                 "id": record.get("id"),

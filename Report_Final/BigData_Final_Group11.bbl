@@ -1,0 +1,51 @@
+\begin{thebibliography}{1}
+
+\bibitem{cormack2009rrf}
+Gordon~V. Cormack, Charles L.~A. Clarke, and Stefan Buettcher.
+\newblock Reciprocal rank fusion outperforms condorcet and individual rank
+  learning methods.
+\newblock In {\em Proceedings of the 32nd International ACM SIGIR Conference on
+  Research and Development in Information Retrieval}, pages 758--759. ACM,
+  2009.
+
+\bibitem{arxiv_dataset}
+{Cornell University}.
+\newblock arxiv dataset, 2024.
+\newblock Accessed: 2026-03-15.
+
+\bibitem{docker_docs}
+{Docker Inc.}
+\newblock Docker compose overview, 2024.
+\newblock Accessed: 2026-03-15.
+
+\bibitem{elasticsearch_docs}
+{Elastic N.V.}
+\newblock Elasticsearch reference [8.12], 2024.
+\newblock Accessed: 2026-03-15.
+
+\bibitem{malkov2018hnsw}
+Yu.~A. Malkov and D.~A. Yashunin.
+\newblock Efficient and robust approximate nearest neighbor search using
+  hierarchical navigable small world graphs.
+\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  42(4):824--836, 2020.
+
+\bibitem{manning2008ir}
+Christopher~D. Manning, Prabhakar Raghavan, and Hinrich Sch\"{u}tze.
+\newblock {\em Introduction to Information Retrieval}.
+\newblock Cambridge University Press, 2008.
+
+\bibitem{reimers2019sentencebert}
+Nils Reimers and Iryna Gurevych.
+\newblock Sentence-bert: Sentence embeddings using siamese bert-networks.
+\newblock In {\em Proceedings of the 2019 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, pages 3982--3992. Association for
+  Computational Linguistics, 2019.
+
+\bibitem{robertson2009bm25}
+Stephen Robertson and Hugo Zaragoza.
+\newblock The probabilistic relevance framework: Bm25 and beyond.
+\newblock {\em Foundations and Trends in Information Retrieval}, 3(4):333--389,
+  2009.
+
+\end{thebibliography}

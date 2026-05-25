@@ -5,7 +5,7 @@ Project: **Building a Hybrid Search System for Academic Documents using Elastics
 ## What you have in this repo
 - Elasticsearch indexing (BM25 + dense vectors)
 - Hybrid search using **manual RRF** (because native RRF requires paid license)
-- Streamlit UI with **year range** + **category multiselect** filters
+- Cloudflare Worker API + static HTML/JS frontend (Cloudflare Pages or any static host)
 - Benchmark / evaluation scripts
 
 ## Prerequisites
@@ -86,10 +86,28 @@ Output:
 .\venv\Scripts\python.exe .\src\evaluate.py
 ```
 
-### 6) Launch Streamlit UI
-```powershell
-.\venv\Scripts\streamlit.exe run .\src\app.py
-```
+### 6) Cloudflare UI & API Deployment
+
+The UI is now served via static HTML/JS (e.g., Cloudflare Pages), talking to the Cloudflare Worker API.
+- Point your browser to the deployed frontend (or open `index.html` + set `API_BASE`).
+- Backend does not require local Python server or Streamlit anymore.
+
+#### Deploy or Update Cloudflare Worker API
+1. Create a classic API token with "Edit Cloudflare Workers" permissions at: https://dash.cloudflare.com/profile/api-tokens.
+2. Save the token in a file `.env` inside `cloudflare/worker/`:
+   ```
+   CLOUDFLARE_API_TOKEN=your_token_goes_here
+   ```
+3. When you want to deploy/update the Worker, run:
+   ```sh
+   export $(grep CLOUDFLARE_API_TOKEN cloudflare/worker/.env)
+   cd cloudflare/worker
+   npx wrangler deploy
+   ```
+4. Wrangler (the deployment tool) only works if the `CLOUDFLARE_API_TOKEN` environment variable is exported at deploy time!
+
+- If using CI/CD, make sure to set up your secret token as an environment variable there too.
+
 
 ## Scale-Up (Final: 1.16M)
 
@@ -147,11 +165,49 @@ Output:
 ## Code layout (high level)
 - `src/pipeline/`: data prep, embedding, indexing
 - `src/search/`: BM25 / kNN / Hybrid + compare utilities
-- `src/ui/`: Streamlit UI implementation
 - `src/evaluation/`: evaluation + benchmark scripts
 - `src/utils/`: sanity checks and data helpers
 
 Note: The files in `src/*.py` are mainly **entry-point wrappers** so older commands still work.
+
+## Dual-Index Architecture
+
+The system uses a **two-index** design for optimal performance and storage efficiency:
+
+| Index | Alias | Purpose | Size | Documents |
+|-------|-------|---------|------|-----------|
+| `arxiv_text` | — | BM25 full-text search (title, abstract, categories, authors) | ~1.5 GB | 1,203,108 |
+| `arxiv_bench` | `arxiv_vectors` | kNN dense-vector search (id + 384-dim embedding) | ~10.4 GB | 1,203,108 |
+
+- **`arxiv_text`** stores all metadata fields but **no embedding vectors**, keeping the index compact and BM25 queries fast.
+- **`arxiv_vectors`** (alias → `arxiv_bench`) stores only the document `id` and a 384-dimensional dense vector produced by `all-MiniLM-L6-v2`. This index is used exclusively for kNN approximate nearest-neighbor queries.
+- **Hybrid search** runs BM25 on `arxiv_text` and kNN on `arxiv_vectors` in parallel, then merges results using **manual Reciprocal Rank Fusion (RRF)** with `k=60`.
+
+Configuration lives in [`src/config.py`](src/config.py):
+```python
+INDEX_TEXT    = "arxiv_text"      # BM25 index
+INDEX_VECTORS = "arxiv_vectors"  # kNN index (alias → arxiv_bench)
+```
+
+## Incremental Ingestion
+
+New documents can be ingested without rebuilding the full index:
+
+```bash
+# CLI — ingest a JSONL file (with optional embedding)
+python -m src.pipeline.ingest --input data/new_papers.jsonl
+
+# REST API — POST a batch of documents
+curl -X POST http://localhost:8000/api/ingest \
+  -H "Content-Type: application/json" \
+  -d @data/new_papers.json
+```
+
+The ingestion pipeline will:
+1. Parse and validate each document.
+2. Generate embeddings (if not already present) using `all-MiniLM-L6-v2`.
+3. Bulk-index metadata into `arxiv_text` and vectors into `arxiv_vectors`.
+4. Report per-batch progress and final counts.
 
 ## Common Errors & Fixes
 

@@ -29,11 +29,23 @@ def prepare_arxiv_data(input_file, output_file, target_category='cs.', sample_si
                 categories = record.get('categories', '')
                 if target_category in categories:
 
-                    # Trích xuất năm xuất bản từ update_date (hoặc id)
-                    # arXiv ID format: YYMM.number hoặc cũ hơn
-                    # Lấy tạm năm từ trường update_date (YYYY-MM-DD)
-                    update_date = record.get('update_date', '')
-                    year = update_date.split('-')[0] if update_date else None
+                    # Trích xuất năm xuất bản từ arXiv ID
+                    # New format: YYMM.nnnnn (e.g., "2301.00001" → 2023)
+                    # Old format: cs/0112017 → fallback to update_date
+                    arxiv_id = record.get('id', '')
+                    year = None
+                    if '.' in arxiv_id:
+                        prefix = arxiv_id.split('.')[0]
+                        # Handle sub-category prefix like "math-ph/0601001" vs "2301.00001"
+                        if '/' in prefix:
+                            prefix = prefix.split('/')[-1]
+                        if len(prefix) == 4 and prefix.isdigit():
+                            yy = int(prefix[:2])
+                            year = str(2000 + yy) if yy < 90 else str(1900 + yy)
+                    if year is None:
+                        # Fallback: use update_date for old-format IDs
+                        update_date = record.get('update_date', '')
+                        year = update_date.split('-')[0] if update_date else None
 
                     # Chỉ lấy các trường cần thiết để tiết kiệm dung lượng
                     clean_record = {
@@ -67,7 +79,7 @@ def prepare_arxiv_data(input_file, output_file, target_category='cs.', sample_si
 
 if __name__ == "__main__":
     # Đường dẫn thư mục
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
 
     INPUT_FILE = os.path.join(DATA_DIR, 'arxiv-metadata-oai-snapshot.json')

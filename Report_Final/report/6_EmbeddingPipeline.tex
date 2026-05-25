@@ -1,0 +1,71 @@
+\chapter{Đường ống Xử lý Dữ liệu (Data Processing Pipeline)}
+\label{ch:data-pipeline}
+
+\section{Tổng quan Quy trình Xử lý Dữ liệu}
+Để chuyển đổi tập dữ liệu thô từ arXiv (4.8GB JSON) thành tập dữ liệu sẵn sàng cho tìm kiếm, hệ thống thực hiện một quy trình xử lý gồm ba giai đoạn chính, được thiết kế theo mô hình đường ống (pipeline) để đảm bảo tính module hóa và khả năng xử lý Big Data:
+
+\begin{enumerate}
+    \item \textbf{Giai đoạn 1 --- Tiền xử lý và Làm sạch (Data Cleaning):} Đọc, lọc và chuẩn hóa dữ liệu thô bằng kỹ thuật streaming.
+    \item \textbf{Giai đoạn 2 --- Sinh Vector Nhúng (Embedding Generation):} Chuyển đổi văn bản thành vector số thực 384 chiều bằng mô hình học sâu.
+    \item \textbf{Giai đoạn 3 --- Đánh Chỉ mục (Indexing):} Nạp dữ liệu sạch và vector nhúng vào Elasticsearch qua Bulk API.
+\end{enumerate}
+
+\section{Giai đoạn 1: Tiền xử lý Dữ liệu Quy mô lớn (Data Cleaning)}
+\subsection{Kỹ thuật Đọc luồng (Streaming)}
+File dữ liệu gốc từ Kaggle có dung lượng rất lớn ($\sim$4.8GB dạng JSON). Nếu đọc toàn bộ file vào RAM bằng hàm \texttt{json.load()}, hệ thống sẽ lập tức cạn kiệt bộ nhớ và bị ngắt kết nối (OOM --- Out of Memory). Script tiền xử lý \texttt{data\_prep\_full.py} khắc phục điều này bằng kỹ thuật \textbf{đọc luồng tuyến tính (Line-by-line Streaming)}: đọc tệp tin theo từng dòng độc lập (mỗi dòng chứa thông tin của một bài báo dưới dạng JSON), phân tích và xử lý tuần tự trước khi ghi trực tiếp dòng kết quả xuống đĩa cứng theo định dạng JSONL (JSON Lines). Kỹ thuật này cho phép xử lý file có dung lượng \textit{lớn hơn} RAM vật lý của máy.
+
+\subsection{Các bước Làm sạch và Chuẩn hóa}
+\begin{itemize}
+    \item \textbf{Trích xuất bài báo Computer Science:} Lọc các bài báo dựa trên trường danh mục (\texttt{categories}). Chỉ các bài báo chứa nhãn \texttt{cs.*} mới được chọn. Qua bộ lọc này, số lượng bài báo giảm từ hơn 2.4 triệu xuống còn 1,203,108 bài.
+    \item \textbf{Sửa lỗi trường năm xuất bản (Year Parsing):} Thay vì sử dụng trường ngày cập nhật hệ thống (\texttt{update\_date}) vốn phản ánh lần sửa đổi cuối cùng của bài báo, hệ thống trích xuất năm trực tiếp từ mã định danh arXiv (\texttt{id}) theo quy luật:
+    \begin{itemize}
+        \item Dạng định danh mới (\texttt{YYMM.nnnnn}): ví dụ \texttt{2301.00001} trích xuất 2 ký tự đầu làm năm (2023).
+        \item Dạng định danh cũ (\texttt{cs/YYMMnnn}): nếu không có dấu chấm phân tách, hệ thống sử dụng thuật toán fallback quay lại đọc năm từ trường ngày cập nhật hệ thống.
+    \end{itemize}
+    \item \textbf{Chuẩn hóa văn bản:} Loại bỏ ký tự xuống dòng (\texttt{\textbackslash n}) trong \texttt{title} và \texttt{abstract}, thay thế bằng khoảng trắng đơn để đảm bảo tính nhất quán khi lập chỉ mục.
+\end{itemize}
+
+\section{Giai đoạn 2: Sinh Vector Nhúng (Embedding Generation)}
+
+\subsection{Giải quyết Vấn đề Tràn Cửa sổ Ngữ cảnh}
+Mô hình nhúng văn bản được chọn là \texttt{all-MiniLM-L6-v2} có giới hạn chiều dài đầu vào tối đa là \textbf{256 tokens} (mỗi token tiếng Anh trung bình khoảng 4 ký tự). Văn bản đầu vào gửi đến mô hình được ghép nối theo cấu trúc:
+\begin{equation}
+T_{\text{input}} = \text{Title} \mathbin{\parallel} \text{[SEP]} \mathbin{\parallel} \text{Abstract}
+\end{equation}
+Trong đó tiêu đề (\text{Title}) trung bình chiếm khoảng 15 tokens và ký tự phân tách đặc biệt \text{[SEP]} chiếm 1 token. Do đó, ngân sách tối đa dành cho tóm tắt (\text{Abstract}) chỉ còn khoảng \textbf{240 tokens}, tương đương khoảng \textbf{960 ký tự}.
+
+Nếu đưa một Abstract quá dài (nhiều Abstract của arXiv dài từ 1500 -- 3000 ký tự) trực tiếp vào hàm \texttt{model.encode()}, mô hình sẽ tự động thực hiện cắt cứng (hard cut) tại token thứ 256, có thể gây mất thông tin ngữ nghĩa quan trọng ở cuối Abstract.
+
+Để giải quyết vấn đề này, chúng tôi thiết kế thuật toán \textbf{Cắt Abstract Thông minh (Smart Abstract Truncation)} trước khi thực hiện nhúng:
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\SetKwFunction{FTruncate}{truncate\_abstract}
+\SetKwInput{Input}{Input}
+\SetKwInput{Output}{Output}
+\Input{Abstract text $A$, Maximum characters limit $M = 960$}
+\Output{Truncated Abstract $A_{trunc}$}
+\If{\text{length of } $A \le M$}{
+    \Return $A$\;
+}
+$C \gets \text{first } M \text{ characters of } A$\;
+$I_{period} \gets \text{index of last period } ``. \text{" in } C$\;
+\If{$I_{period} > M \times 0.6$}{
+    \Return $C[0 \dots I_{period}]$\;
+}
+\Else{
+    \Return $C$\;
+}
+\caption{Thuật toán Cắt Abstract Thông minh theo ranh giới câu}
+\label{alg:truncation}
+\end{algorithm}
+Thuật toán này đảm bảo văn bản Abstract được cắt tại ranh giới của một câu hoàn chỉnh nếu khoảng cách cắt chấp nhận được (lớn hơn 60\% chiều dài giới hạn), giúp duy trì cấu trúc câu tự nhiên và chất lượng ngữ nghĩa của vector biểu diễn tốt nhất.
+
+\subsection{Tăng tốc bằng GPU đám mây (Google Colab)}
+Khi nâng cấp hệ thống lên quy mô 1.2 triệu bài báo, việc sinh vector nhúng trên CPU cục bộ gặp phải rào cản lớn: tốc độ chỉ đạt 5 -- 10 tài liệu/giây, tương đương 33 -- 66 giờ chạy liên tục. Do đó, chúng tôi chuyển sang môi trường đám mây \textbf{Google Colab} sử dụng GPU NVIDIA Tesla T4 (16GB VRAM):
+\begin{itemize}
+    \item \textbf{Cấu hình lô (Batching):} Sử dụng kích thước lô tối ưu là \textbf{512 tài liệu} mỗi lượt suy luận, tận dụng tối đa băng thông bộ nhớ GPU mà không gây lỗi tràn VRAM.
+    \item \textbf{Hiệu năng thực tế:} Tốc độ sinh vector đạt trung bình \textbf{500 -- 800 tài liệu/giây} (nhanh gấp $\sim$80 lần so với CPU). Toàn bộ 1,203,108 bài báo hoàn thành trong vòng \textbf{35 phút}.
+    \item \textbf{Cơ chế Checkpoint và Resume:} Hệ thống ghi trực tiếp kết quả xuống Google Drive theo định dạng JSONL. Cứ mỗi \textbf{50.000 tài liệu}, chương trình tự động ghi file trạng thái \texttt{progress.json}. Nếu phiên Colab bị ngắt kết nối, hệ thống tự động đọc tệp trạng thái và tiếp tục sinh vector từ chỉ mục hiện tại mà không phải tính toán lại từ đầu.
+\end{itemize}
+
+Kết quả của giai đoạn này là tệp tin \texttt{arxiv\_cs\_full\_with\_vectors.jsonl} có dung lượng khoảng \textbf{5.4 GB}, sẵn sàng cho quá trình đánh chỉ mục tại Elasticsearch cục bộ.

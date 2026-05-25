@@ -1,0 +1,29 @@
+\chapter{Giới thiệu (Introduction)}
+
+\section{Bối cảnh vấn đề}
+Trong những năm gần đây, sự phát triển mạnh mẽ của các nghiên cứu khoa học đã tạo ra một sự bùng nổ về khối lượng tài liệu học thuật. Các kho lưu trữ mở như arXiv hiện đang chứa hàng triệu bài báo trải dài trên hàng trăm lĩnh vực khác nhau, tạo thành một nguồn dữ liệu khổng lồ (Big Data). Mặc dù sự phong phú này là một tài nguyên quý giá, nhưng nó cũng trực tiếp dẫn đến bài toán ``quá tải thông tin''. Sinh viên và các nhà nghiên cứu đang phải dành một lượng thời gian khổng lồ chỉ để tra cứu, sàng lọc và đánh giá mức độ liên quan của tài liệu, thay vì tập trung vào việc nghiên cứu cốt lõi.\\
+
+Đứng trước khối lượng dữ liệu khổng lồ này, các công cụ tìm kiếm học thuật truyền thống bắt đầu bộc lộ sự quá tải và những giới hạn về mặt kiến trúc.\\
+\begin{itemize}
+    \item Nếu áp dụng các công cụ tìm kiếm thuần dựa trên từ khóa (Lexical Search), hệ thống sẽ vô cùng cứng nhắc, không thể hiểu được ngữ cảnh phức tạp, từ đồng nghĩa hay ý đồ thực sự của người tra cứu.
+    \item Ngược lại, nếu chỉ lạm dụng các mô hình Trí tuệ nhân tạo (AI Search) để hiểu ngữ nghĩa, hệ thống lại dễ dàng đánh mất tính chính xác tuyệt đối---một yếu tố sống còn trong nghiên cứu khoa học khi người dùng cần tìm đích danh một tác giả cụ thể, một công thức, hay một thuật ngữ viết tắt chuyên ngành hiếm gặp. Hơn nữa, việc áp dụng các bộ lọc siêu dữ liệu (như năm xuất bản, danh mục) lên các hệ thống AI thường xuyên gây ra sự sai lệch hoặc làm giảm hiệu suất hệ thống đáng kể.
+\end{itemize}
+Với lượng dữ liệu lớn nhưng thiếu công cụ trích xuất thông minh đã đặt ra một yêu cầu cấp thiết: Cần phải có một kiến trúc tìm kiếm thế hệ mới, có khả năng xử lý Dữ liệu lớn với tốc độ cao, đồng thời dung hòa được cả độ chính xác của tìm kiếm từ khóa và sự thông minh của AI hiểu ngữ cảnh \cite{manning2008ir}.
+
+\section{Mục tiêu dự án}
+Dự án hướng tới việc xây dựng một hệ thống tìm kiếm lai (Hybrid Search) toàn diện dành cho tài liệu học thuật, sử dụng Elasticsearch làm nền tảng cốt lõi. Bằng cách kết hợp ưu điểm của cả hai phương pháp: tìm kiếm văn bản truyền thống (Keyword Search) để đảm bảo độ chính xác tuyệt đối của các thuật ngữ chuyên ngành, và tìm kiếm vector (Vector Search) để nắm bắt ý nghĩa ngữ cảnh, hệ thống kỳ vọng sẽ khắc phục triệt để các hạn chế của các bộ máy tìm kiếm hiện tại, từ đó mang lại kết quả tra cứu chính xác và tối ưu nhất cho người dùng.
+\begin{itemize}
+    \item \textbf{Về quản trị và xử lý dữ liệu:} Thiết lập quy trình thu thập, làm sạch và chuẩn hóa khối lượng lớn dữ liệu học thuật thô từ các nguồn mở. Đảm bảo dữ liệu được định dạng tối ưu, sẵn sàng cho việc lập chỉ mục (indexing) và truy xuất ở quy mô hàng triệu bản ghi.
+    \item \textbf{Về kiến trúc nền tảng:} Triển khai một hạ tầng tìm kiếm phân tán mạnh mẽ, có khả năng lưu trữ và xử lý đồng thời cả dữ liệu văn bản thuần túy và các biểu diễn không gian vector đa chiều. Hệ thống phải đảm bảo tính sẵn sàng cao và phản hồi truy vấn với độ trễ thấp (low latency).
+    \item \textbf{Về thuật toán truy xuất cốt lõi:} Phát triển cơ chế tìm kiếm đa luồng, cho phép thực thi song song các truy vấn dựa trên từ vựng và truy vấn dựa trên ngữ nghĩa. Trọng tâm là xây dựng cấu trúc tự động đánh giá, tính điểm và hợp nhất xếp hạng từ các nguồn kết quả khác nhau để tối ưu hóa độ chính xác.
+    \item \textbf{Về giao diện tương tác:} Xây dựng giao diện web hiện đại kết nối với backend API, hỗ trợ chuyển đổi giữa các chế độ tìm kiếm (BM25, kNN, Hybrid) và lọc kết quả theo năm, danh mục trực quan.
+    \item \textbf{Về tính ứng dụng và đánh giá:} Hoàn thiện giao diện tương tác trực quan, hỗ trợ người dùng thực hiện các thao tác tra cứu và lọc dữ liệu phức tạp. Đồng thời, áp dụng các bộ tiêu chí đánh giá định lượng khoa học để chứng minh hiệu năng của mô hình Tìm kiếm Lai so với các phương pháp truyền thống.
+\end{itemize}
+
+\section{Phạm vi (Scope)}
+\begin{itemize}
+    \item \textbf{Về nguồn tài nguyên dữ liệu}: Dự án khai thác kho lưu trữ tài liệu học thuật mở arXiv thông qua bộ dữ liệu từ Kaggle. Đây là nguồn tài nguyên tri thức đa ngành quy mô lớn, cung cấp hệ thống thuộc tính phong phú từ nội dung văn bản cho đến các siêu dữ liệu phân loại.
+    \item \textbf{Về quy mô dữ liệu}: Hệ thống được triển khai trên toàn bộ 1,203,108 bài báo thuộc lĩnh vực Khoa học Máy tính, mỗi bài báo kèm vector nhúng 384 chiều. Đồng thời, các thử nghiệm đánh giá được thực hiện trên nhiều quy mô (100k, 500k, 1.2M) để kiểm chứng khả năng mở rộng.
+    \item \textbf{Về hạ tầng kỹ thuật}: Hệ thống Elasticsearch 8.12 cục bộ trên Docker với kiến trúc Dual-Index (\texttt{arxiv\_text} cho BM25, \texttt{arxiv\_vectors} cho kNN) phục vụ toàn bộ 1.2M bài báo. Backend FastAPI và Frontend React cung cấp giao diện tương tác đầy đủ.
+    \item \textbf{Về phương pháp luận}: Trọng tâm là hoàn thiện hệ thống Hybrid Search sử dụng thuật toán Reciprocal Rank Fusion (RRF) kết hợp tìm kiếm BM25 và kNN Vector, cùng bộ đánh giá chất lượng NDCG@10 và MRR@10.
+\end{itemize}

@@ -1,0 +1,42 @@
+\chapter{Dataset (Dữ liệu)}
+
+\section{Nguồn dữ liệu}
+Dự án sử dụng bộ dữ liệu arXiv từ Kaggle \cite{arxiv_dataset} (\url{https://www.kaggle.com/datasets/Cornell-University/arxiv}), một kho lưu trữ mở chứa các bài báo học thuật do Cornell University duy trì và cập nhật liên tục.
+
+\section{Quy mô và Đặc điểm}
+\begin{itemize}
+    \item \textbf{Tổng số lượng:} Hơn 2.7 triệu bài báo. Đây là một tập dữ liệu có tính tích lũy cao, được cập nhật liên tục.
+    \item \textbf{Dung lượng file gốc:} Hơn 3GB (file JSON dạng line-delimited, mỗi dòng là một bản ghi JSON).
+    \item \textbf{Độ phủ:} Hơn 130 lĩnh vực (Computer Science, Physics, Mathematics,...).
+    \item \textbf{Tập con sử dụng:} Toàn bộ 1,203,108 bài báo thuộc lĩnh vực Computer Science (\texttt{cs.*}).
+\end{itemize}
+
+\section{Cấu trúc dữ liệu khai thác}
+Bảng \ref{tab:data-schema} mô tả cấu trúc các trường dữ liệu được trích xuất và sử dụng trong hệ thống:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|p{6cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu gốc} & \textbf{ES Type} & \textbf{Mô tả \& Vai trò} \\ \hline
+\texttt{id} & string & \texttt{keyword} & Mã định danh duy nhất của bài báo trên arXiv \\ \hline
+\texttt{title} & string & \texttt{text} & Tiêu đề bài báo -- phục vụ tìm kiếm BM25 (boost $\times 2$) \\ \hline
+\texttt{abstract} & string & \texttt{text} & Tóm tắt nội dung -- phục vụ tìm kiếm BM25 \\ \hline
+\texttt{categories} & string & \texttt{keyword} & Danh mục phân loại (VD: \texttt{cs.AI}, \texttt{cs.LG}) -- phục vụ exact-match filtering \\ \hline
+\texttt{authors} & string & \texttt{text} & Danh sách tác giả \\ \hline
+\texttt{year} & string & \texttt{keyword} & Năm cập nhật -- phục vụ exact-match filtering \\ \hline
+\end{tabular}
+\caption{Cấu trúc dữ liệu được lập chỉ mục vào Elasticsearch}
+\label{tab:data-schema}
+\end{table}
+
+\section{Quy trình làm sạch dữ liệu (Data Cleaning)}
+Do file gốc có dung lượng hơn 3GB, việc đọc toàn bộ vào bộ nhớ (RAM) cùng lúc là không khả thi trên hầu hết cấu hình máy tính phổ thông. Nhóm đã áp dụng kỹ thuật \textbf{streaming (đọc từng dòng)} để xử lý tuần tự, giúp kiểm soát tốt bộ nhớ ngay cả khi kích thước dữ liệu lên đến hàng GB. Quy trình cụ thể bao gồm:
+\begin{enumerate}
+    \item \textbf{Đọc tuần tự (Line-by-line streaming):} Mở file gốc và xử lý từng dòng JSON, tránh tải toàn bộ file vào RAM.
+    \item \textbf{Lọc danh mục (Category filtering):} Chỉ giữ lại các bản ghi có trường \texttt{categories} chứa tiền tố \texttt{cs.} (Computer Science).
+    \item \textbf{Loại bỏ bản ghi lỗi:} Bỏ qua các dòng không parse được (malformed JSON) và các bản ghi thiếu trường \texttt{title} hoặc \texttt{abstract}.
+    \item \textbf{Chuẩn hóa văn bản:} Loại bỏ ký tự xuống dòng (\textbackslash n) trong \texttt{title} và \texttt{abstract}, trim khoảng trắng dư thừa.
+    \item \textbf{Trích xuất metadata:} Tách trường \texttt{year} từ \texttt{update\_date} (định dạng YYYY-MM-DD).
+    \item \textbf{Xuất file:} Lưu kết quả dưới dạng JSONL chuẩn để phục vụ cho bước Sinh Vector Nhúng (Embedding) và Bulk Indexing tiếp theo.
+\end{enumerate}

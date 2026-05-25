@@ -1,7 +1,7 @@
 """
 Index arXiv CS papers WITH vectors into Elasticsearch.
 Streaming JSONL reader — does NOT load entire file into RAM.
-Supports dense_vector for kNN search, custom academic_english analyzer, 5 shards.
+Supports dense_vector for kNN search, custom academic_english analyzer, 2 shards.
 
 Usage:
   .\venv\Scripts\python.exe src\index_data_v2.py
@@ -23,7 +23,7 @@ DEFAULT_INDEX = "arxiv_papers_v2"
 
 INDEX_SETTINGS = {
     "settings": {
-        "number_of_shards": 5,
+        "number_of_shards": 2,
         "number_of_replicas": 0,
         "refresh_interval": "-1",
         "analysis": {
@@ -123,7 +123,7 @@ def main():
         print(f"Index '{args.index}' exists. Deleting...")
         es.indices.delete(index=args.index)
 
-    print(f"Creating index '{args.index}' (5 shards, academic_english analyzer, dense_vector)...")
+    print(f"Creating index '{args.index}' (2 shards, academic_english analyzer, dense_vector)...")
     es.indices.create(index=args.index, body=INDEX_SETTINGS)
     print("Index created!\n")
 

@@ -115,6 +115,17 @@ def main():
 
             title = record.get("title", "")
             abstract = record.get("abstract", "")
+            # Truncate abstract to fit model's max_seq_length (256 tokens)
+            # Title ~15 tokens + [SEP] ~1 token → ~240 tokens left for abstract
+            # 1 token ≈ 4 chars → 240 × 4 = 960 chars
+            MAX_ABSTRACT_CHARS = 960
+            if len(abstract) > MAX_ABSTRACT_CHARS:
+                cut = abstract[:MAX_ABSTRACT_CHARS]
+                last_period = cut.rfind(". ")
+                if last_period > MAX_ABSTRACT_CHARS * 0.6:
+                    abstract = cut[:last_period + 1]
+                else:
+                    abstract = cut
             text = f"{title} [SEP] {abstract}"
 
             texts_batch.append(text)

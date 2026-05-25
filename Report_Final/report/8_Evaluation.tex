@@ -1,0 +1,113 @@
+\chapter{Đánh giá Chất lượng Tìm kiếm (Evaluation \& Analysis)}
+\label{ch:evaluation}
+
+\section{Phương pháp Xây dựng Tập Nhãn Kiểm định (Ground Truth Construction)}
+Để đánh giá chất lượng tìm kiếm một cách khoa học, chúng tôi tiến hành xây dựng tập dữ liệu kiểm định chuẩn (Ground Truth) theo phương pháp \textbf{Gom cụm Ứng viên (Query Pooling)}:
+\begin{enumerate}
+    \item \textbf{Thiết kế Tập Truy vấn:} Sử dụng bộ 30 câu truy vấn thử nghiệm được lưu trữ trong tệp tin \texttt{test\_queries.json}, chia đều thành 3 nhóm có tính chất đặc trưng khác nhau:
+    \begin{itemize}
+        \item \textbf{Nhóm A (Exact Keyword Queries):} Gồm 10 câu truy vấn chứa các thuật ngữ công nghệ chính xác (ví dụ: \textit{``BERT fine-tuning''}, \textit{``GAN image generation''}). Nhóm này thử thách khả năng đối khớp chính xác của chỉ mục đảo ngược.
+        \item \textbf{Nhóm B (Semantic Concept Queries):} Gồm 10 câu hỏi viết dưới dạng ngôn ngữ tự nhiên, mô tả khái niệm (ví dụ: \textit{``methods to detect fake images''}). Nhóm này thử thách khả năng hiểu ngữ nghĩa không phụ thuộc từ khóa của kNN.
+        \item \textbf{Nhóm C (Mixed/Hybrid Queries):} Gồm 10 câu truy vấn kết hợp cả thuật ngữ chuyên ngành lẫn ngữ cảnh ứng dụng (ví dụ: \textit{``transformer architecture for NLP tasks''}).
+    \end{itemize}
+    \item \textbf{Thu thập Ứng viên (Pooling):} Hệ thống chạy song song 3 phương pháp tìm kiếm (BM25, kNN, Hybrid RRF) trên từng câu truy vấn để lấy ra top 10 kết quả của mỗi phương pháp. Các kết quả này được gộp chung lại và loại bỏ trùng lặp để tạo ra danh sách ứng viên (candidate pool) có quy mô từ 15 đến 25 tài liệu cho mỗi câu truy vấn.
+    \item \textbf{Dán nhãn và Hợp nhất (Silver Standard Labeling):} Nhằm xử lý khối lượng nhãn lớn một cách khoa học và nhất quán, chúng tôi áp dụng phương pháp gán nhãn tự động thông qua \textbf{Biểu quyết đa số (Majority Voting Proxy)} kết hợp với kiểm thử thủ công qua công cụ \texttt{src/evaluation/view\_candidates.py}:
+    \begin{itemize}
+        \item Một tài liệu ứng viên được coi là \textbf{Liên quan (Nhãn 1)} nếu nó xuất hiện trong kết quả tìm kiếm của ít nhất 2 trên 3 phương pháp.
+        \item Các tài liệu chỉ xuất hiện duy nhất ở 1 phương pháp và không có sự đồng thuận từ các phương pháp khác sẽ được coi là \textbf{Không liên quan (Nhãn 0)}, trừ một số truy vấn đặc biệt được kiểm tra và hiệu chỉnh thủ công.
+    \end{itemize}
+    Tập nhãn cuối cùng (Silver Standard) được lưu trữ tại \texttt{data/ground\_truth\_labeled.json}. Sau đó, quy trình tương tự được chạy riêng để tạo tập nhãn cho scale 100k lưu tại \texttt{data/ground\_truth\_100k\_labeled.json}.
+\end{enumerate}
+
+\section{Các Chỉ số Đo lường Chất lượng Xếp hạng}
+Chất lượng của các thuật toán xếp hạng được đánh giá thông qua hai độ đo chuẩn tắc trong hệ thống thu hồi thông tin \cite{manning2008ir}:
+
+\subsection{Lý do Lựa chọn NDCG@10 và MRR@10}
+Trong bài toán tìm kiếm tài liệu học thuật, người dùng chỉ quan tâm đến một số ít kết quả đầu tiên (thường top 5--10) và hiếm khi duyệt đến trang thứ hai. Do đó, việc chọn các độ đo đánh giá cần phản ánh chính xác chất lượng của top kết quả:
+
+\begin{itemize}
+    \item \textbf{Tại sao NDCG@10?} NDCG (Normalized Discounted Cumulative Gain) là độ đo chuẩn trong lĩnh vực Information Retrieval vì nó \textit{phạt nặng} các tài liệu liên quan bị xếp ở vị trí thấp. Cụ thể, tài liệu ở vị trí 1 đóng góp gấp $\sim$3 lần điểm số so với tài liệu ở vị trí 10 (do hàm discount $\log_2$). Điều này phù hợp với hành vi thực tế của người dùng: họ tin tưởng kết quả đầu tiên nhiều hơn. Hơn nữa, NDCG được chuẩn hóa về thang $[0, 1]$ nên cho phép so sánh công bằng giữa các phương pháp tìm kiếm khác nhau (BM25, kNN, Hybrid) trên cùng một tập truy vấn.
+    \item \textbf{Tại sao MRR@10?} MRR (Mean Reciprocal Rank) đo lường một khía cạnh bổ sung mà NDCG không nắm bắt được: \textit{``Người dùng có tìm thấy ít nhất một tài liệu đúng nhanh đến mức nào?''}. Trong ngữ cảnh tìm kiếm học thuật, đây là câu hỏi rất thực tế --- người nghiên cứu chỉ cần tìm được \textit{một} bài báo liên quan để bắt đầu đọc và theo dõi các trích dẫn. MRR = 1.0 có nghĩa là kết quả đầu tiên luôn liên quan, trong khi MRR = 0.5 có nghĩa là trung bình phải xem đến kết quả thứ 2.
+    \item \textbf{Tại sao cutoff @10?} Hệ thống trả về mặc định 10 kết quả (\texttt{RESULT\_SIZE = 10} trong cấu hình). Việc đánh giá tại vị trí $p = 10$ phản ánh chính xác trải nghiệm thực tế của người dùng cuối khi sử dụng giao diện tìm kiếm.
+\end{itemize}
+
+\subsection{NDCG@10 (Normalized Discounted Cumulative Gain tại vị trí 10)}
+Độ đo này đánh giá chất lượng xếp hạng dựa trên giả thuyết: các tài liệu liên quan nhiều hơn nên được xếp ở vị trí cao hơn trong danh sách kết quả. 
+Điểm số DCG tại vị trí $p$ được tính bằng công thức:
+\begin{equation}
+DCG@p = \sum_{i=1}^{p} \frac{2^{rel_i} - 1}{\log_2(i + 1)}
+\end{equation}
+Trong đó $rel_i \in \{0, 1\}$ là nhãn tương quan của tài liệu ở vị trí thứ $i$. NDCG@p được tính bằng cách chuẩn hóa DCG@p theo điểm số lý tưởng IDCG@p (điểm số thu được khi danh sách được sắp xếp hoàn hảo):
+\begin{equation}
+NDCG@p = \frac{DCG@p}{IDCG@p}
+\end{equation}
+NDCG@10 nằm trong khoảng $[0.0, 1.0]$. Giá trị càng gần 1.0 thể hiện hệ thống xếp các tài liệu chuẩn lên đầu càng tốt.
+
+\subsection{MRR@10 (Mean Reciprocal Rank tại vị trí 10)}
+Độ đo này tập trung vào vị trí xuất hiện của tài liệu liên quan đầu tiên trong danh sách kết quả. Điểm số Reciprocal Rank (RR) cho một câu truy vấn được tính bằng:
+\begin{equation}
+RR = \frac{1}{\text{rank}^*}
+\end{equation}
+Trong đó $\text{rank}^*$ là vị trí của tài liệu liên quan đầu tiên. Nếu không có tài liệu liên quan nào trong top 10, điểm số $RR = 0$. MRR là trung bình cộng điểm số RR của toàn bộ tập truy vấn.
+
+\section{Kết quả Thử nghiệm và Phân tích So sánh}
+Sau khi chạy script kiểm định chất lượng \texttt{src/evaluation/evaluate.py} trên tập dữ liệu đã dán nhãn, kết quả so sánh hiệu năng giữa ba thuật toán xếp hạng ở quy mô toàn vẹn 1.2M bài báo được tổng hợp trong Bảng \ref{tab:eval-results}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{\textbf{Tìm kiếm}} & \multicolumn{2}{c|}{\textbf{Nhóm A (Exact)}} & \multicolumn{2}{c|}{\textbf{Nhóm B (Semantic)}} & \multicolumn{2}{c|}{\textbf{Nhóm C (Mixed)}} \\
+\cline{2-7}
+& \textbf{NDCG} & \textbf{MRR} & \textbf{NDCG} & \textbf{MRR} & \textbf{NDCG} & \textbf{MRR} \\
+\hline
+\textbf{BM25} & 0.6407 & 0.8750 & 0.6780 & 1.0000 & 0.6967 & 1.0000 \\
+\hline
+\textbf{kNN (Vector)} & 0.6554 & 0.9250 & 0.6632 & 1.0000 & 0.6774 & 1.0000 \\
+\hline
+\textbf{Hybrid (RRF)} & \textbf{0.9752} & \textbf{1.0000} & \textbf{0.9469} & \textbf{0.9250} & \textbf{0.9821} & \textbf{1.0000} \\
+\hline
+\end{tabular}
+\caption{Bảng so sánh chất lượng tìm kiếm NDCG@10 và MRR@10 trên các nhóm truy vấn ở quy mô 1.2M}
+\label{tab:eval-results}
+\end{table}
+
+Để trực quan hóa sự khác biệt về chất lượng tìm kiếm giữa hai quy mô dữ liệu (100k so với 1.2M bài báo), chúng tôi cung cấp biểu đồ so sánh NDCG@10 và MRR trong Hình \ref{fig:ndcg-mrr-comparison}:
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{ndcg_comparison.png}
+        \caption{So sánh chất lượng NDCG@10}
+        \label{fig:ndcg-comparison}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{mrr_comparison.png}
+        \caption{So sánh chất lượng MRR}
+        \label{fig:mrr-comparison}
+    \end{minipage}
+    \caption{Biểu đồ so sánh chất lượng tìm kiếm (NDCG@10 và MRR) giữa quy mô 100k và 1.2M}
+    \label{fig:ndcg-mrr-comparison}
+\end{figure}
+
+\subsection{Phân tích Nhóm A (Exact Keyword Queries)}
+\textbf{Nhận xét:} Khi tìm kiếm các từ khóa chính xác, cả BM25 và kNN Vector đều đạt kết quả tương đối tốt (NDCG lần lượt là 0.6407 và 0.6554). Tuy nhiên, Hybrid Search (RRF) đạt hiệu quả vượt trội (NDCG = 0.9752, MRR = 1.0000).\\
+\textbf{Lý giải:} Khi người dùng truy vấn bằng thuật ngữ công nghệ cụ thể, BM25 định vị chính xác bài báo chứa thuật ngữ đó, trong khi kNN tìm được các bài báo có nội dung gần gũi nhưng sử dụng từ đồng nghĩa. Cơ chế RRF đã phát huy tối đa tác dụng bằng cách xếp hạng cao những bài viết thỏa mãn cả hai chiều: vừa chứa từ khóa chính xác vừa có ngữ nghĩa sát thực tế.
+
+\subsection{Phân tích Nhóm B (Semantic Concept Queries)}
+\textbf{Nhận xét:} Trong nhóm truy vấn ngôn ngữ tự nhiên mô tả khái niệm, Hybrid Search tiếp tục dẫn đầu với NDCG đạt 0.9469. BM25 và kNN Vector cho kết quả tương đương (lần lượt là 0.6780 và 0.6632).\\
+\textbf{Lý giải:} Sự kết hợp RRF (Hybrid) giữ được độ đồng thuận cao nhất và đem lại kết quả chuẩn xác nhất cho người dùng, kể cả khi truy vấn bằng ngôn ngữ tự nhiên mô tả khái niệm trừu tượng.
+
+\subsection{Phân tích Nhóm C (Mixed/Hybrid Queries)}
+\textbf{Nhận xét:} Hybrid Search đạt điểm số cao nhất (NDCG = 0.9821, MRR = 1.0000), bỏ xa hai phương pháp đơn lẻ (BM25 = 0.6967, kNN = 0.6774).\\
+\textbf{Lý giải:} Đây là nhóm truy vấn sát thực tế nhất. Kết quả chứng minh RRF hoạt động hiệu quả nhờ khả năng kết hợp luồng tìm kiếm chính xác (BM25) và luồng ngữ cảnh (kNN Vector). Việc kết hợp giúp nâng cao đáng kể khả năng tìm thấy tài liệu liên quan mà một phương pháp đơn lẻ dễ dàng bỏ sót.
+
+\subsection{So sánh qua các Quy mô Dữ liệu (Scalability Quality Trends)}
+\begin{itemize}
+    \item \textbf{Tính ổn định của kNN Vector:} Điểm số NDCG của kNN Vector hầu như không thay đổi khi tăng quy mô từ 100k lên 1.2M (giữ vững ở mức 0.66). Điều này cho thấy chất lượng tìm kiếm ngữ nghĩa của không gian nhúng vector và cấu trúc chỉ mục HNSW có khả năng chống nhiễu tuyệt đối và duy trì độ chính xác cực kỳ tốt khi quy mô dữ liệu mở rộng lớn.
+    \item \textbf{Sự sụt giảm nhẹ của BM25:} Điểm số NDCG của BM25 giảm từ 0.7212 (ở 100k) xuống 0.6718 (ở 1.2M). Khi kho tài liệu lớn gấp 12 lần, tần suất xuất hiện ngẫu nhiên của các từ khóa trong các ngữ cảnh không liên quan tăng lên, làm tăng số lượng tài liệu nhiễu (distractors), làm loãng kết quả của chỉ mục đảo ngược truyền thống.
+    \item \textbf{Độ tin cậy của Hybrid Search:} Hybrid Search luôn duy trì chất lượng xếp hạng ổn định cao nhất ở cả hai scale (NDCG đạt $\sim$0.96--0.97). Điều này khẳng định tìm kiếm lai Hybrid RRF là kiến trúc tìm kiếm vững chắc và có khả năng mở rộng tốt nhất cho các hệ thống Big Data lớn.
+\end{itemize}
