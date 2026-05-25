@@ -2,3 +2,7 @@
 *
 !.gitignore
 !test_queries.json
+
+# Cho phép đưa thư mục charts/ (biểu đồ kết quả) lên git
+!charts/
+!charts/**

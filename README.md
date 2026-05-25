@@ -52,61 +52,93 @@ docker compose up -d
 ## Quick Start (Midterm: 100k)
 
 ### 1) Start Elasticsearch + Kibana
-```powershell
+```bash
 docker compose up -d
 ```
-Then you should be able to open Kibana at:
-- `http://localhost:5601`
+Kibana Dashboard sẽ mở tại: `http://localhost:5601`
 
-### 2) Prepare data (extract CS papers)
-This generates:
-- `data/arxiv_cs_100k_clean.json`
-```powershell
-.\venv\Scripts\python.exe .\src\data_prep.py
+### 2) Prepare data (trích xuất các bài báo CS)
+Lệnh này lọc dữ liệu gốc để lấy 100k bài báo thuộc lĩnh vực Computer Science:
+- Tạo ra file: `data/arxiv_cs_100k_clean.json`
+```bash
+python src/data_prep.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/data_prep.py`)*
+
+### 3) Embed (Title + Abstract -> Dense Vectors 384-dim)
+Sinh vector embedding cho các bài báo (nếu teammate có sẵn file `.jsonl` đã embed từ Google Drive thì có thể bỏ qua bước này):
+- Tạo ra file: `data/arxiv_cs_100k_with_vectors.jsonl`
+```bash
+python src/embed_data.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/embed_data.py`)*
+
+### 4) Cấu hình Dual-Index Architecture
+Hệ thống sử dụng kiến trúc **Dual-Index** (tách riêng index tìm kiếm văn bản BM25 và index tìm kiếm kNN vector) nhằm tối ưu hiệu năng và dung lượng. Các bước thiết lập như sau:
+
+#### Bước A: Đẩy toàn bộ dữ liệu (metadata + vector) vào index cơ sở `arxiv_bench`
+```bash
+python src/index_data_v2.py --input data/arxiv_cs_100k_with_vectors.jsonl --index arxiv_bench
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/index_data_v2.py ...`)*
+
+#### Bước B: Chạy Script tự động phân tách cấu trúc Dual-Index
+```bash
+python src/setup_dual_index.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/setup_dual_index.py`)*
+
+**Ý nghĩa các file cấu hình Elasticsearch trong thư mục `data/` được sử dụng trong script:**
+* 📄 **`data/es_text_mapping.json`**: Chứa cài đặt cấu trúc cho index **`arxiv_text`** (dùng cho tìm kiếm text BM25). Index này sử dụng bộ phân tách từ tùy chỉnh `academic_english` (hỗ trợ chữ thường, lọc stopword học thuật) và **loại bỏ hoàn toàn trường vector** để giữ index nhẹ tối đa.
+* 📄 **`data/es_reindex.json`**: Cú pháp lệnh gửi tới API `_reindex` của Elasticsearch để đồng bộ dữ liệu từ `arxiv_bench` sang `arxiv_text`, chỉ lọc lấy các trường text và loại trừ trường `embedding`.
+* 📄 **`data/es_alias.json`**: Lệnh gán nhãn Alias **`arxiv_vectors`** trỏ vào index `arxiv_bench` chứa vector, giúp truy vấn kNN hoạt động ổn định thông qua bí danh.
+
+---
+
+## 💻 Khởi chạy Local API & Giao diện React UI
+
+### 1) Chạy FastAPI Backend
+Dịch vụ API cục bộ hỗ trợ tìm kiếm Hybrid (RRF), BM25, kNN, lấy danh sách categories, years, và Ingest dữ liệu mới:
+```bash
+python src/api.py
+```
+* API hoạt động tại: `http://localhost:8000`
+* Tài liệu Swagger UI: `http://localhost:8000/docs`
+
+### 2) Chạy React + Vite Frontend
+Giao diện tìm kiếm học thuật được thiết kế Premium Dark Glassmorphism, bộ lọc năm và chuyên mục được hiển thị trực quan, kiểm thử logic năm tự động:
+```bash
+cd local-ui
+npm install
+npm run dev
+```
+* Giao diện hoạt động tại: `http://localhost:5173`
+
+---
+
+## 🧪 Đánh giá & Phân tích (Evaluation)
+
+### 1) Run evaluation (30 queries)
+Đánh giá chất lượng tìm kiếm bằng các độ đo học thuật:
+- Tạo ra file: `data/evaluation_results.json`
+```bash
+python src/evaluate.py
 ```
 
-### 3) Embed (title + abstract -> dense vectors)
-This generates (default output):
-- `data/arxiv_cs_100k_with_vectors.jsonl`
-```powershell
-.\venv\Scripts\python.exe .\src\embed_data.py
-```
-
-### 4) Index into Elasticsearch (v2 index with vectors)
-This (default) builds:
-- index: `arxiv_papers_v2`
-```powershell
-.\venv\Scripts\python.exe .\src\index_data_v2.py
-```
-
-### 5) Run evaluation (30 queries)
-Output:
-- `data/evaluation_results.json`
-```powershell
-.\venv\Scripts\python.exe .\src\evaluate.py
-```
-
-### 6) Cloudflare UI & API Deployment
-
-The UI is now served via static HTML/JS (e.g., Cloudflare Pages), talking to the Cloudflare Worker API.
-- Point your browser to the deployed frontend (or open `index.html` + set `API_BASE`).
-- Backend does not require local Python server or Streamlit anymore.
-
-#### Deploy or Update Cloudflare Worker API
-1. Create a classic API token with "Edit Cloudflare Workers" permissions at: https://dash.cloudflare.com/profile/api-tokens.
-2. Save the token in a file `.env` inside `cloudflare/worker/`:
-   ```
+### 2) Cloudflare API Deployment (Tùy chọn)
+Nếu muốn triển khai API lên Cloudflare Worker thay vì chạy server local:
+1. Tạo API token có quyền "Edit Cloudflare Workers" tại: https://dash.cloudflare.com/profile/api-tokens.
+2. Lưu token vào file `.env` tại `cloudflare/worker/.env`:
+   ```env
    CLOUDFLARE_API_TOKEN=your_token_goes_here
    ```
-3. When you want to deploy/update the Worker, run:
-   ```sh
+3. Deploy Worker:
+   ```bash
    export $(grep CLOUDFLARE_API_TOKEN cloudflare/worker/.env)
    cd cloudflare/worker
    npx wrangler deploy
    ```
-4. Wrangler (the deployment tool) only works if the `CLOUDFLARE_API_TOKEN` environment variable is exported at deploy time!
 
-- If using CI/CD, make sure to set up your secret token as an environment variable there too.
 
 
 ## Scale-Up (Final: 1.16M)
