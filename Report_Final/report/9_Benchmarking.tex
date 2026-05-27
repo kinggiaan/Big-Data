@@ -31,7 +31,7 @@ Kết quả thời gian phản hồi trung bình của 30 câu truy vấn mẫu 
 \hline
 \textbf{BM25} & 15.3 & 56.4 & 20.6 & 37.1 & 70.6 & 152.6 \\
 \hline
-\textbf{kNN (Vector)} & 12.8 & 34.2 & 20.3 & 41.4 & 191.3 & 1205.8 \\
+\textbf{Vector Search} & 12.8 & 34.2 & 20.3 & 41.4 & 191.3 & 1205.8 \\
 \hline
 \textbf{Hybrid (RRF)} & 29.8 & 53.1 & 42.4 & 62.1 & 99.0 & 156.4 \\
 \hline
@@ -63,7 +63,7 @@ Kết quả thời gian phản hồi trung bình của 30 câu truy vấn mẫu 
 
 \subsection{Phân tích và Biện luận kết quả Latency}
 \begin{itemize}
-    \item \textbf{Hiện tượng Cold Start và Page Cache Warming:} Trong quá trình đo đạc thực tế ở quy mô 1.2M, chúng tôi nhận thấy độ trễ của kNN độc lập tăng vọt (P50 đạt 191.3ms, P95 lên tới 1205.8ms) trong khi Hybrid Search lại có độ trễ thấp hơn đáng kể (P50 = 99.0ms, P95 = 156.4ms). Điều này phản ánh rõ cơ chế hoạt động của Lucene và hệ điều hành: Ở lượt truy vấn kNN đầu tiên, đồ thị HNSW lớn phải nạp từ ổ đĩa SSD vào OS Page Cache dẫn đến nghẽn I/O (Cold Start). Khi cache đã được làm ấm (Warmed Cache), các lượt truy vấn tiếp theo (bao gồm Hybrid Search) truy xuất trực tiếp trên RAM và đạt hiệu năng rất cao.
+    \item \textbf{Hiện tượng Cold Start và Page Cache Warming:} Trong quá trình đo đạc thực tế ở quy mô 1.2M, chúng tôi nhận thấy độ trễ của search vector độc lập tăng vọt (P50 đạt 191.3ms, P95 lên tới 1205.8ms) trong khi Hybrid Search lại có độ trễ thấp hơn đáng kể (P50 = 99.0ms, P95 = 156.4ms). Điều này phản ánh rõ cơ chế hoạt động của Lucene và hệ điều hành: Ở lượt truy vấn search vector đầu tiên, đồ thị HNSW lớn phải nạp từ ổ đĩa SSD vào OS Page Cache dẫn đến nghẽn I/O (Cold Start). Khi cache đã được làm ấm (Warmed Cache), các lượt truy vấn tiếp theo (bao gồm Hybrid Search) truy xuất trực tiếp trên RAM và đạt hiệu năng rất cao.
     \item \textbf{BM25 Search:} Vẫn duy trì ưu thế vượt trội về mặt tốc độ ở quy mô nhỏ (P50 = 15.3ms ở 100k). Khi nâng lên 1.2M, P50 tăng lên 70.6ms và P95 đạt 152.6ms do khối lượng tài liệu trong mỗi segment tăng lên, khiến quá trình tính điểm TF-IDF và duyệt posting list tiêu tốn nhiều CPU hơn.
     \item \textbf{Hybrid Search (RRF):} Cho thấy khả năng kiểm soát độ trễ rất tốt sau khi bộ đệm hệ thống đã được tối ưu. Với độ trễ P50 là 99.0ms ở quy mô lớn nhất 1.2M, Hybrid Search hoàn toàn đáp ứng được tiêu chuẩn thời gian thực (dưới 100ms) của các hệ thống tìm kiếm công nghiệp.
 \end{itemize}
@@ -110,7 +110,7 @@ Dung lượng vật lý tiêu tốn trên đĩa cứng tương ứng với từn
 Việc xây dựng hệ thống tìm kiếm thực tế là một bài toán tối ưu hóa sự cân bằng giữa chất lượng tìm kiếm và chi phí tài nguyên vận hành:
 \begin{enumerate}
     \item \textbf{BM25 (Chi phí thấp --- Chất lượng trung bình):} BM25 hoạt động nhẹ nhàng nhất, chỉ cần dung lượng RAM nhỏ (JVM Heap 1GB -- 2GB) và tài nguyên CPU tối thiểu. Tuy nhiên chất lượng tìm kiếm giảm sút khi gặp các truy vấn khái niệm phức tạp (NDCG giảm xuống 0.64 -- 0.67).
-    \item \textbf{kNN Vector (Chi phí cao --- Chất lượng ổn định):} kNN Vector Search yêu cầu bộ nhớ RAM lớn để nạp toàn bộ đồ thị HNSW phục vụ tìm kiếm khoảng cách gần nhất. Độ trễ có xu hướng tăng cao ở lượt đầu tiên (Cold Start) nhưng cực kỳ ổn định về chất lượng khi quy mô phình to.
+    \item \textbf{Search Vector (Chi phí cao --- Chất lượng ổn định):} Vector Search yêu cầu bộ nhớ RAM lớn để nạp toàn bộ đồ thị HNSW phục vụ tìm kiếm khoảng cách gần nhất. Độ trễ có xu hướng tăng cao ở lượt đầu tiên (Cold Start) nhưng cực kỳ ổn định về chất lượng khi quy mô phình to.
     \item \textbf{Hybrid Search (Chi phí cao --- Chất lượng tối ưu nhất):} Đạt điểm số NDCG@10 vượt trội hoàn toàn ($\sim$0.97 -- 0.98), mang lại kết quả chuẩn xác nhất cho mọi dạng truy vấn. Nhờ cấu hình thông minh ES Heap 6GB trên môi trường RAM 12GB WSL, Hybrid Search khắc phục được độ trễ cold-start và duy trì phản hồi mượt mà dưới 100ms (P50 = 99.0ms).
 \end{enumerate}
 \textbf{Kết luận:} Với ứng dụng tìm kiếm tài liệu khoa học học thuật chuyên biệt như arXiv, việc đầu tư tài nguyên phần cứng (đặc biệt là dung lượng RAM đủ lớn cho Lucene cache và cấu hình ES Heap tối ưu) để vận hành \textbf{Hybrid Search với RRF} là giải pháp tối ưu và mang lại giá trị thực tiễn lớn nhất.

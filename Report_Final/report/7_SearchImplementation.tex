@@ -37,16 +37,16 @@ Cú pháp DSL truy vấn BM25 trong hệ thống được triển khai như sau:
 }
 \end{lstlisting}
 
-\section{Truy vấn Tìm kiếm Vector tương đồng (kNN Search)}
+\section{Truy vấn Tìm kiếm Vector tương đồng (Semantic Search)}
 Tìm kiếm ngữ nghĩa (Semantic Search) được thực hiện bằng cách so khớp khoảng cách không gian giữa vector truy vấn và các vector tài liệu trong cơ sở dữ liệu Elasticsearch.
 \begin{itemize}
     \item \textbf{Cơ chế mô hình:} Câu truy vấn văn bản thô từ người dùng được gửi qua mô hình \texttt{all-MiniLM-L6-v2} trên CPU cục bộ để chuyển đổi thành vector thực 384 chiều (độ dài vector được chuẩn hóa về đơn vị norm = 1.0).
-    \item \textbf{Định nghĩa chỉ mục kNN:} Trường \texttt{embedding} trong Elasticsearch được thiết lập sử dụng giải thuật HNSW (Hierarchical Navigable Small World) để tạo cấu trúc đồ thị tìm kiếm láng giềng gần nhất với hàm đo độ tương đồng Cosine (\texttt{similarity: "cosine"}).
+    \item \textbf{Định nghĩa chỉ mục vector:} Trường \texttt{embedding} trong Elasticsearch được thiết lập sử dụng giải thuật HNSW (Hierarchical Navigable Small World) để tạo cấu trúc đồ thị tìm kiếm láng giềng gần nhất với hàm đo độ tương đồng Cosine (\texttt{similarity: "cosine"}).
     \item \textbf{Ứng viên tìm kiếm (Search Candidates):} Thiết lập tham số \texttt{num\_candidates = 100} cho mỗi phân mảnh. Elasticsearch sẽ chọn ra 100 tài liệu có khoảng cách vector gần nhất trên từng shard (tổng cộng 200 ứng viên từ 2 shards) trước khi thực hiện sắp xếp lại và trả về top kết quả.
 \end{itemize}
 
-Cú pháp DSL truy vấn kNN trong hệ thống được triển khai như sau:
-\begin{lstlisting}[caption={Elasticsearch kNN Query DSL},label={lst:knn-dsl}]
+Cú pháp DSL truy vấn vector trong hệ thống được triển khai như sau:
+\begin{lstlisting}[caption={Elasticsearch Vector Query DSL},label={lst:knn-dsl}]
 {
   "knn": {
     "field": "embedding",
@@ -59,7 +59,7 @@ Cú pháp DSL truy vấn kNN trong hệ thống được triển khai như sau:
 \end{lstlisting}
 
 \section{Truy vấn Kết hợp Hybrid Search dùng RRF}
-Để khắc phục nhược điểm của từng phương pháp tìm kiếm độc lập (BM25 bỏ sót các từ đồng nghĩa; kNN vector đôi khi bỏ sót các từ khóa chuyên ngành viết tắt chính xác), hệ thống triển khai cơ chế tìm kiếm kết hợp \textbf{Hybrid Search} sử dụng giải thuật gộp thứ hạng \textbf{Reciprocal Rank Fusion (RRF)}.
+Để khắc phục nhược điểm của từng phương pháp tìm kiếm độc lập (BM25 bỏ sót các từ đồng nghĩa; search vector đôi khi bỏ sót các từ khóa chuyên ngành viết tắt chính xác), hệ thống triển khai cơ chế tìm kiếm kết hợp \textbf{Hybrid Search} sử dụng giải thuật gộp thứ hạng \textbf{Reciprocal Rank Fusion (RRF)}.
 
 Thuật toán RRF xếp hạng lại các tài liệu dựa trên vị trí (thứ hạng) của chúng trong các danh sách kết quả trả về riêng lẻ thay vì cộng trực tiếp điểm số (vì điểm BM25 và điểm Cosine kNN có thang đo hoàn toàn khác nhau). 
 Điểm số RRF của tài liệu $d$ được tính theo công thức:
@@ -68,7 +68,7 @@ RRF\_Score(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
 \end{equation}
 Trong đó:
 \begin{itemize}
-    \item $M$ là tập hợp các phương pháp tìm kiếm ($M = \{\text{BM25}, \text{kNN}\}$).
+    \item $M$ là tập hợp các phương pháp tìm kiếm ($M = \{\text{BM25}, \text{Vector search}\}$).
     \item $r_m(d)$ là thứ hạng (vị trí từ 1 trở đi) của tài liệu $d$ trong danh sách kết quả của phương pháp $m$. Nếu tài liệu không nằm trong danh sách kết quả, thứ hạng coi như bằng vô cùng ($\infty$) và số hạng tương ứng bằng 0.
     \item $k$ là hằng số làm mịn, giúp giảm thiểu tầm ảnh hưởng của các tài liệu có thứ hạng cực kỳ cao. Chúng tôi thiết lập $k = 60$ theo các thực nghiệm chuẩn mực \cite{cormack2009rrf}.
 \end{itemize}
@@ -86,8 +86,8 @@ Thuật toán gộp thứ hạng RRF được lập trình trực tiếp bằng 
 Trong phiên bản cải tiến, hệ thống tách biệt các chỉ mục theo chức năng:
 \begin{itemize}
     \item Truy vấn BM25 được gửi đến chỉ mục \texttt{arxiv\_text} --- chỉ chứa văn bản, không có vector nhúng.
-    \item Truy vấn kNN được gửi đến chỉ mục \texttt{arxiv\_vectors} --- chứa cả metadata và vector nhúng 384 chiều.
-    \item Sau khi gộp thứ hạng RRF, các tài liệu chỉ xuất hiện trong kết quả kNN sẽ được bổ sung metadata từ \texttt{arxiv\_text} thông qua lệnh \texttt{es.mget()} (Multi-Get API).
+    \item Truy vấn vector được gửi đến chỉ mục \texttt{arxiv\_vectors} --- chứa cả metadata và vector nhúng 384 chiều.
+    \item Sau khi gộp thứ hạng RRF, các tài liệu chỉ xuất hiện trong kết quả truy vấn vector sẽ được bổ sung metadata từ \texttt{arxiv\_text} thông qua lệnh \texttt{es.mget()} (Multi-Get API).
 \end{itemize}
 
 Kiến trúc này mang lại hai ưu điểm chính:

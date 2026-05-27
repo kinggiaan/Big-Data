@@ -7,10 +7,10 @@
     \item \textbf{Thiết kế Tập Truy vấn:} Sử dụng bộ 30 câu truy vấn thử nghiệm được lưu trữ trong tệp tin \texttt{test\_queries.json}, chia đều thành 3 nhóm có tính chất đặc trưng khác nhau:
     \begin{itemize}
         \item \textbf{Nhóm A (Exact Keyword Queries):} Gồm 10 câu truy vấn chứa các thuật ngữ công nghệ chính xác (ví dụ: \textit{``BERT fine-tuning''}, \textit{``GAN image generation''}). Nhóm này thử thách khả năng đối khớp chính xác của chỉ mục đảo ngược.
-        \item \textbf{Nhóm B (Semantic Concept Queries):} Gồm 10 câu hỏi viết dưới dạng ngôn ngữ tự nhiên, mô tả khái niệm (ví dụ: \textit{``methods to detect fake images''}). Nhóm này thử thách khả năng hiểu ngữ nghĩa không phụ thuộc từ khóa của kNN.
+        \item \textbf{Nhóm B (Semantic Concept Queries):} Gồm 10 câu hỏi viết dưới dạng ngôn ngữ tự nhiên, mô tả khái niệm (ví dụ: \textit{``methods to detect fake images''}). Nhóm này thử thách khả năng hiểu ngữ nghĩa không phụ thuộc từ khóa của vector search.
         \item \textbf{Nhóm C (Mixed/Hybrid Queries):} Gồm 10 câu truy vấn kết hợp cả thuật ngữ chuyên ngành lẫn ngữ cảnh ứng dụng (ví dụ: \textit{``transformer architecture for NLP tasks''}).
     \end{itemize}
-    \item \textbf{Thu thập Ứng viên (Pooling):} Hệ thống chạy song song 3 phương pháp tìm kiếm (BM25, kNN, Hybrid RRF) trên từng câu truy vấn để lấy ra top 10 kết quả của mỗi phương pháp. Các kết quả này được gộp chung lại và loại bỏ trùng lặp để tạo ra danh sách ứng viên (candidate pool) có quy mô từ 15 đến 25 tài liệu cho mỗi câu truy vấn.
+    \item \textbf{Thu thập Ứng viên (Pooling):} Hệ thống chạy song song 3 phương pháp tìm kiếm (BM25, Vector search, Hybrid RRF) trên từng câu truy vấn để lấy ra top 10 kết quả của mỗi phương pháp. Các kết quả này được gộp chung lại và loại bỏ trùng lặp để tạo ra danh sách ứng viên (candidate pool) có quy mô từ 15 đến 25 tài liệu cho mỗi câu truy vấn.
     \item \textbf{Dán nhãn và Hợp nhất (Silver Standard Labeling):} Nhằm xử lý khối lượng nhãn lớn một cách khoa học và nhất quán, chúng tôi áp dụng phương pháp gán nhãn tự động thông qua \textbf{Biểu quyết đa số (Majority Voting Proxy)} kết hợp với kiểm thử thủ công qua công cụ \texttt{src/evaluation/view\_candidates.py}:
     \begin{itemize}
         \item Một tài liệu ứng viên được coi là \textbf{Liên quan (Nhãn 1)} nếu nó xuất hiện trong kết quả tìm kiếm của ít nhất 2 trên 3 phương pháp.
@@ -63,7 +63,7 @@ Sau khi chạy script kiểm định chất lượng \texttt{src/evaluation/eval
 \hline
 \textbf{BM25} & 0.6407 & 0.8750 & 0.6780 & 1.0000 & 0.6967 & 1.0000 \\
 \hline
-\textbf{kNN (Vector)} & 0.6554 & 0.9250 & 0.6632 & 1.0000 & 0.6774 & 1.0000 \\
+\textbf{Vector search} & 0.6554 & 0.9250 & 0.6632 & 1.0000 & 0.6774 & 1.0000 \\
 \hline
 \textbf{Hybrid (RRF)} & \textbf{0.9752} & \textbf{1.0000} & \textbf{0.9469} & \textbf{0.9250} & \textbf{0.9821} & \textbf{1.0000} \\
 \hline
@@ -94,20 +94,20 @@ Sau khi chạy script kiểm định chất lượng \texttt{src/evaluation/eval
 \end{figure}
 
 \subsection{Phân tích Nhóm A (Exact Keyword Queries)}
-\textbf{Nhận xét:} Khi tìm kiếm các từ khóa chính xác, cả BM25 và kNN Vector đều đạt kết quả tương đối tốt (NDCG lần lượt là 0.6407 và 0.6554). Tuy nhiên, Hybrid Search (RRF) đạt hiệu quả vượt trội (NDCG = 0.9752, MRR = 1.0000).\\
-\textbf{Lý giải:} Khi người dùng truy vấn bằng thuật ngữ công nghệ cụ thể, BM25 định vị chính xác bài báo chứa thuật ngữ đó, trong khi kNN tìm được các bài báo có nội dung gần gũi nhưng sử dụng từ đồng nghĩa. Cơ chế RRF đã phát huy tối đa tác dụng bằng cách xếp hạng cao những bài viết thỏa mãn cả hai chiều: vừa chứa từ khóa chính xác vừa có ngữ nghĩa sát thực tế.
+\textbf{Nhận xét:} Khi tìm kiếm các từ khóa chính xác, cả BM25 và Search Vector đều đạt kết quả tương đối tốt (NDCG lần lượt là 0.6407 và 0.6554). Tuy nhiên, Hybrid Search (RRF) đạt hiệu quả vượt trội (NDCG = 0.9752, MRR = 1.0000).\\
+\textbf{Lý giải:} Khi người dùng truy vấn bằng thuật ngữ công nghệ cụ thể, BM25 định vị chính xác bài báo chứa thuật ngữ đó, trong khi vector search tìm được các bài báo có nội dung gần gũi nhưng sử dụng từ đồng nghĩa. Cơ chế RRF đã phát huy tối đa tác dụng bằng cách xếp hạng cao những bài viết thỏa mãn cả hai chiều: vừa chứa từ khóa chính xác vừa có ngữ nghĩa sát thực tế.
 
 \subsection{Phân tích Nhóm B (Semantic Concept Queries)}
-\textbf{Nhận xét:} Trong nhóm truy vấn ngôn ngữ tự nhiên mô tả khái niệm, Hybrid Search tiếp tục dẫn đầu với NDCG đạt 0.9469. BM25 và kNN Vector cho kết quả tương đương (lần lượt là 0.6780 và 0.6632).\\
+\textbf{Nhận xét:} Trong nhóm truy vấn ngôn ngữ tự nhiên mô tả khái niệm, Hybrid Search tiếp tục dẫn đầu với NDCG đạt 0.9469. BM25 và Search Vector cho kết quả tương đương (lần lượt là 0.6780 và 0.6632).\\
 \textbf{Lý giải:} Sự kết hợp RRF (Hybrid) giữ được độ đồng thuận cao nhất và đem lại kết quả chuẩn xác nhất cho người dùng, kể cả khi truy vấn bằng ngôn ngữ tự nhiên mô tả khái niệm trừu tượng.
 
 \subsection{Phân tích Nhóm C (Mixed/Hybrid Queries)}
-\textbf{Nhận xét:} Hybrid Search đạt điểm số cao nhất (NDCG = 0.9821, MRR = 1.0000), bỏ xa hai phương pháp đơn lẻ (BM25 = 0.6967, kNN = 0.6774).\\
-\textbf{Lý giải:} Đây là nhóm truy vấn sát thực tế nhất. Kết quả chứng minh RRF hoạt động hiệu quả nhờ khả năng kết hợp luồng tìm kiếm chính xác (BM25) và luồng ngữ cảnh (kNN Vector). Việc kết hợp giúp nâng cao đáng kể khả năng tìm thấy tài liệu liên quan mà một phương pháp đơn lẻ dễ dàng bỏ sót.
+\textbf{Nhận xét:} Hybrid Search đạt điểm số cao nhất (NDCG = 0.9821, MRR = 1.0000), bỏ xa hai phương pháp đơn lẻ (BM25 = 0.6967, Search Vector = 0.6774).\\
+\textbf{Lý giải:} Đây là nhóm truy vấn sát thực tế nhất. Kết quả chứng minh RRF hoạt động hiệu quả nhờ khả năng kết hợp luồng tìm kiếm chính xác (BM25) và luồng ngữ cảnh (Search Vector). Việc kết hợp giúp nâng cao đáng kể khả năng tìm thấy tài liệu liên quan mà một phương pháp đơn lẻ dễ dàng bỏ sót.
 
 \subsection{So sánh qua các Quy mô Dữ liệu (Scalability Quality Trends)}
 \begin{itemize}
-    \item \textbf{Tính ổn định của kNN Vector:} Điểm số NDCG của kNN Vector hầu như không thay đổi khi tăng quy mô từ 100k lên 1.2M (giữ vững ở mức 0.66). Điều này cho thấy chất lượng tìm kiếm ngữ nghĩa của không gian nhúng vector và cấu trúc chỉ mục HNSW có khả năng chống nhiễu tuyệt đối và duy trì độ chính xác cực kỳ tốt khi quy mô dữ liệu mở rộng lớn.
+    \item \textbf{Tính ổn định của Search Vector:} Điểm số NDCG của Search Vector hầu như không thay đổi khi tăng quy mô từ 100k lên 1.2M (giữ vững ở mức 0.66). Điều này cho thấy chất lượng tìm kiếm ngữ nghĩa của không gian nhúng vector và cấu trúc chỉ mục HNSW có khả năng chống nhiễu tuyệt đối và duy trì độ chính xác cực kỳ tốt khi quy mô dữ liệu mở rộng lớn.
     \item \textbf{Sự sụt giảm nhẹ của BM25:} Điểm số NDCG của BM25 giảm từ 0.7212 (ở 100k) xuống 0.6718 (ở 1.2M). Khi kho tài liệu lớn gấp 12 lần, tần suất xuất hiện ngẫu nhiên của các từ khóa trong các ngữ cảnh không liên quan tăng lên, làm tăng số lượng tài liệu nhiễu (distractors), làm loãng kết quả của chỉ mục đảo ngược truyền thống.
     \item \textbf{Độ tin cậy của Hybrid Search:} Hybrid Search luôn duy trì chất lượng xếp hạng ổn định cao nhất ở cả hai scale (NDCG đạt $\sim$0.96--0.97). Điều này khẳng định tìm kiếm lai Hybrid RRF là kiến trúc tìm kiếm vững chắc và có khả năng mở rộng tốt nhất cho các hệ thống Big Data lớn.
 \end{itemize}

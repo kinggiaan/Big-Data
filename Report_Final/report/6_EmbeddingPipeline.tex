@@ -36,7 +36,10 @@ Trong đó tiêu đề (\text{Title}) trung bình chiếm khoảng 15 tokens và
 
 Nếu đưa một Abstract quá dài (nhiều Abstract của arXiv dài từ 1500 -- 3000 ký tự) trực tiếp vào hàm \texttt{model.encode()}, mô hình sẽ tự động thực hiện cắt cứng (hard cut) tại token thứ 256, có thể gây mất thông tin ngữ nghĩa quan trọng ở cuối Abstract.
 
-Để giải quyết vấn đề này, chúng tôi thiết kế thuật toán \textbf{Cắt Abstract Thông minh (Smart Abstract Truncation)} trước khi thực hiện nhúng:
+\newpage
+
+Để giải quyết vấn đề này, chúng tôi thiết kế thuật toán \textbf{Cắt Abstract Thông minh (Smart Abstract Truncation)} trước khi thực hiện nhúng:\par\medskip
+
 \begin{algorithm}[H]
 \DontPrintSemicolon
 \SetKwFunction{FTruncate}{truncate\_abstract}
@@ -58,6 +61,7 @@ $I_{period} \gets \text{index of last period } ``. \text{" in } C$\;
 \caption{Thuật toán Cắt Abstract Thông minh theo ranh giới câu}
 \label{alg:truncation}
 \end{algorithm}
+
 Thuật toán này đảm bảo văn bản Abstract được cắt tại ranh giới của một câu hoàn chỉnh nếu khoảng cách cắt chấp nhận được (lớn hơn 60\% chiều dài giới hạn), giúp duy trì cấu trúc câu tự nhiên và chất lượng ngữ nghĩa của vector biểu diễn tốt nhất.
 
 \subsection{Tăng tốc bằng GPU đám mây (Google Colab)}
@@ -68,4 +72,4 @@ Khi nâng cấp hệ thống lên quy mô 1.2 triệu bài báo, việc sinh vec
     \item \textbf{Cơ chế Checkpoint và Resume:} Hệ thống ghi trực tiếp kết quả xuống Google Drive theo định dạng JSONL. Cứ mỗi \textbf{50.000 tài liệu}, chương trình tự động ghi file trạng thái \texttt{progress.json}. Nếu phiên Colab bị ngắt kết nối, hệ thống tự động đọc tệp trạng thái và tiếp tục sinh vector từ chỉ mục hiện tại mà không phải tính toán lại từ đầu.
 \end{itemize}
 
-Kết quả của giai đoạn này là tệp tin \texttt{arxiv\_cs\_full\_with\_vectors.jsonl} có dung lượng khoảng \textbf{5.4 GB}, sẵn sàng cho quá trình đánh chỉ mục tại Elasticsearch cục bộ.
+Kết quả của giai đoạn này là tệp tin \texttt{arxiv\_cs\_full\_with\_vectors.jsonl} có dung lượng khoảng \textbf{11.05 GB}, sẵn sàng cho quá trình đánh chỉ mục tại Elasticsearch cục bộ.

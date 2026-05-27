@@ -16,7 +16,7 @@ Dự án hướng tới việc xây dựng một hệ thống tìm kiếm lai (H
     \item \textbf{Về quản trị và xử lý dữ liệu:} Thiết lập quy trình thu thập, làm sạch và chuẩn hóa khối lượng lớn dữ liệu học thuật thô từ các nguồn mở. Đảm bảo dữ liệu được định dạng tối ưu, sẵn sàng cho việc lập chỉ mục (indexing) và truy xuất ở quy mô hàng triệu bản ghi.
     \item \textbf{Về kiến trúc nền tảng:} Triển khai một hạ tầng tìm kiếm phân tán mạnh mẽ, có khả năng lưu trữ và xử lý đồng thời cả dữ liệu văn bản thuần túy và các biểu diễn không gian vector đa chiều. Hệ thống phải đảm bảo tính sẵn sàng cao và phản hồi truy vấn với độ trễ thấp (low latency).
     \item \textbf{Về thuật toán truy xuất cốt lõi:} Phát triển cơ chế tìm kiếm đa luồng, cho phép thực thi song song các truy vấn dựa trên từ vựng và truy vấn dựa trên ngữ nghĩa. Trọng tâm là xây dựng cấu trúc tự động đánh giá, tính điểm và hợp nhất xếp hạng từ các nguồn kết quả khác nhau để tối ưu hóa độ chính xác.
-    \item \textbf{Về giao diện tương tác:} Xây dựng giao diện web hiện đại kết nối với backend API, hỗ trợ chuyển đổi giữa các chế độ tìm kiếm (BM25, kNN, Hybrid) và lọc kết quả theo năm, danh mục trực quan.
+    \item \textbf{Về giao diện tương tác:} Xây dựng giao diện web hiện đại kết nối với backend API, hỗ trợ chuyển đổi giữa các chế độ tìm kiếm (BM25, Vector, Hybrid) và lọc kết quả theo năm, danh mục trực quan.
     \item \textbf{Về tính ứng dụng và đánh giá:} Hoàn thiện giao diện tương tác trực quan, hỗ trợ người dùng thực hiện các thao tác tra cứu và lọc dữ liệu phức tạp. Đồng thời, áp dụng các bộ tiêu chí đánh giá định lượng khoa học để chứng minh hiệu năng của mô hình Tìm kiếm Lai so với các phương pháp truyền thống.
 \end{itemize}
 
@@ -25,5 +25,5 @@ Dự án hướng tới việc xây dựng một hệ thống tìm kiếm lai (H
     \item \textbf{Về nguồn tài nguyên dữ liệu}: Dự án khai thác kho lưu trữ tài liệu học thuật mở arXiv thông qua bộ dữ liệu từ Kaggle. Đây là nguồn tài nguyên tri thức đa ngành quy mô lớn, cung cấp hệ thống thuộc tính phong phú từ nội dung văn bản cho đến các siêu dữ liệu phân loại.
     \item \textbf{Về quy mô dữ liệu}: Hệ thống được triển khai trên toàn bộ 1,203,108 bài báo thuộc lĩnh vực Khoa học Máy tính, mỗi bài báo kèm vector nhúng 384 chiều. Đồng thời, các thử nghiệm đánh giá được thực hiện trên nhiều quy mô (100k, 500k, 1.2M) để kiểm chứng khả năng mở rộng.
     \item \textbf{Về hạ tầng kỹ thuật}: Hệ thống Elasticsearch 8.12 cục bộ trên Docker với kiến trúc Dual-Index (\texttt{arxiv\_text} cho BM25, \texttt{arxiv\_vectors} cho kNN) phục vụ toàn bộ 1.2M bài báo. Backend FastAPI và Frontend React cung cấp giao diện tương tác đầy đủ.
-    \item \textbf{Về phương pháp luận}: Trọng tâm là hoàn thiện hệ thống Hybrid Search sử dụng thuật toán Reciprocal Rank Fusion (RRF) kết hợp tìm kiếm BM25 và kNN Vector, cùng bộ đánh giá chất lượng NDCG@10 và MRR@10.
+    \item \textbf{Về phương pháp luận}: Trọng tâm là hoàn thiện hệ thống Hybrid Search sử dụng thuật toán Reciprocal Rank Fusion (RRF) kết hợp tìm kiếm BM25 và vector search, cùng bộ đánh giá chất lượng NDCG@10 và MRR@10.
 \end{itemize}
