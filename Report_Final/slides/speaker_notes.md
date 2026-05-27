@@ -4,8 +4,8 @@
 - **Tổng thời lượng dự kiến:** 20 - 25 phút
 - **Phân chia người trình bày (Speaker Blocks):**
   1. **Nguyễn Thanh Huyền (Huyền):** Slide 1 đến Slide 12 (~11 phút) — Phần mở đầu, Bối cảnh, Bài toán, Mục tiêu, Dữ liệu & Cơ sở lý thuyết.
-  2. **Dương Gia An (An):** Slide 13 đến Slide 18 (~6 phút) — Kiến trúc hệ thống & GPU Embedding Pipeline.
-  3. **Trịnh Sơn Lam (Lam):** Slide 19 đến Slide 39 (~12-14 phút) — Chi tiết Triển khai tìm kiếm, Đánh giá chất lượng, Benchmarking hiệu năng, Demo, Kết luận & Q&A.
+  2. **Dương Gia An (An):** Slide 13 đến Slide 34 (~18-20 phút) — Kiến trúc hệ thống, GPU Embedding Pipeline, Chi tiết Triển khai tìm kiếm, Đánh giá chất lượng, Benchmarking hiệu năng & Demo.
+  3. **Trịnh Sơn Lam (Lam):** Slide 35 đến Slide 39 (~2 phút) — Tài liệu tham khảo, Q&A & Backup Slides.
 
 ---
 
@@ -229,11 +229,11 @@
 
 ---
 
-## PHẦN 3: TRIỂN KHAI TÌM KIẾM, ĐÁNH GIÁ VÀ HƯỚNG PHÁT TRIỂN (Slide 19 - 39)
-**Người trình bày: Trịnh Sơn Lam (Lam)**
+## PHẦN 3: TRIỂN KHAI TÌM KIẾM, ĐÁNH GIÁ VÀ HƯỚNG PHÁT TRIỂN (Slide 19 - 34)
+**Người trình bày: Dương Gia An (An)**
 
-### Slide 19: Keyword Search — Keyword Matching (1 phút) — Người trình bày: Lam
-> "Cảm ơn phần trình bày của bạn Gia An. Em là Sơn Lam, tiếp tục trình bày từ Chương 7: Search Implementation.
+### Slide 19: Keyword Search — Keyword Matching (1 phút) — Người trình bày: An
+> "Bây giờ, em xin đi vào Chương 7: Search Implementation để trình bày chi tiết về quá trình triển khai các cơ chế tìm kiếm.
 > Đầu tiên là truy vấn **Keyword Search** bằng Elasticsearch DSL. Cú pháp DSL sử dụng query `multi_match` trên hai trường `title` và `abstract`. Tiêu đề được áp dụng hệ số tăng cường `title^2` nhằm ưu tiên bài viết khớp từ khóa ngay trên tiêu đề. Kiểu truy vấn là `best_fields` giúp lấy điểm số cao nhất của trường khớp tốt nhất.
 > Chỉ mục tương ứng là `arxiv_text` dung lượng chỉ 1.5 GB. Ưu điểm nổi bật của phương pháp này là tốc độ phản hồi cực kỳ nhanh, khoảng 70ms cho phân vị P50 trên quy mô 1.2 triệu bài báo, rất chính xác cho các tên riêng, mã số hay thuật ngữ công nghệ chính xác và tiêu tốn rất ít tài nguyên hệ thống."
 
@@ -243,7 +243,7 @@
 
 ---
 
-### Slide 20: Semantic Search — Semantic Understanding (1 phút) — Người trình bày: Lam
+### Slide 20: Semantic Search — Semantic Understanding (1 phút) — Người trình bày: An
 > "Đối với luồng **Semantic Search**, hệ thống sử dụng truy vấn `knn` trong Elasticsearch DSL. Điểm tìm kiếm được tính dựa trên trường `embedding` lưu trữ vector 384 chiều. Chúng em cấu hình tham số `k=10` để trả về 10 láng giềng gần nhất và `num_candidates = 100` cho mỗi phân mảnh để giới hạn không gian tìm kiếm trên đồ thị HNSW.
 > Quy trình xử lý gồm: chuyển đổi câu truy vấn thô của người dùng thành vector 384 chiều nhờ mô hình nhúng cục bộ, duyệt đồ thị HNSW để tìm các ứng viên lân cận và xếp hạng theo Cosine Similarity. Ưu điểm lớn nhất là hệ thống hiểu được các từ đồng nghĩa và cách diễn đạt khác nhau, cho phép tìm kiếm bằng các câu mô tả khái niệm tự nhiên mà không cần khớp từ khóa chính xác."
 
@@ -253,7 +253,7 @@
 
 ---
 
-### Slide 21: Hybrid Search — Kết hợp tất cả (1.5 phút) — Người trình bày: Lam
+### Slide 21: Hybrid Search — Kết hợp tất cả (1.5 phút) — Người trình bày: An
 > "Để đạt được kết quả tối ưu nhất, **Hybrid Search** kết hợp song song cả hai luồng: Một truy vấn BM25 được gửi đến index `arxiv_text` và một truy vấn kNN gửi đến `arxiv_vectors`. Cả hai luồng này đều lấy về top 30 ứng viên thay vì top 10 để làm phong phú tập kết quả. Sau đó, hệ thống trích xuất ID tài liệu, áp dụng công thức RRF với $k=60$ để xếp hạng lại, chọn ra top 10 kết quả tốt nhất.
 > Điểm đặc biệt của kiến trúc Dual-Index của nhóm là việc tách biệt hoàn toàn hai chỉ mục: `arxiv_text` chỉ chứa văn bản nhẹ nhàng và `arxiv_vectors` chứa vector nhúng lớn. Điều này giúp tối ưu hóa dung lượng RAM và CPU khi thực hiện các truy vấn độc lập, đồng thời hỗ trợ cập nhật dữ liệu gia tăng thời gian thực thông qua API mà không cần đánh lại chỉ mục toàn bộ. Khi nạp dữ liệu lớn, chúng em cũng áp dụng các tối ưu hóa như tắt `refresh_interval`, đặt `replicas = 0` và chạy lệnh `_forcemerge` để tối ưu hóa đồ thị HNSW."
 
@@ -263,7 +263,7 @@
 
 ---
 
-### Slide 22: Phương pháp đánh giá (1 phút) — Người trình bày: Lam
+### Slide 22: Phương pháp đánh giá (1 phút) — Người trình bày: An
 > "Tiếp theo là Chương 8: Đánh giá chất lượng. Để đánh giá hệ thống một cách khách quan và chính xác, nhóm đã xây dựng một tập Ground Truth gồm **30 test queries** chia đều thành 3 nhóm đặc trưng:
 > - **Nhóm A (Exact):** Chứa các từ khóa chính xác như *'BERT fine-tuning'*.
 > - **Nhóm B (Semantic):** Là các truy vấn khái niệm tự nhiên như *'methods to detect fake images'*.
@@ -276,7 +276,7 @@
 
 ---
 
-### Slide 23: Metrics: NDCG@10 và MRR@10 (1 phút) — Người trình bày: Lam
+### Slide 23: Metrics: NDCG@10 và MRR@10 (1 phút) — Người trình bày: An
 > "Nhóm lựa chọn hai độ đo chuẩn trong Information Retrieval để đánh giá chất lượng xếp hạng là **NDCG@10** và **MRR@10**:
 > - **NDCG@10 (Normalized Discounted Cumulative Gain):** Đánh giá chất lượng của toàn bộ top 10 kết quả, trong đó các tài liệu liên quan được xếp ở vị trí càng cao thì điểm số đóng góp càng lớn nhờ hàm logarit giảm dần. Điểm số nằm trong khoảng $[0.0, 1.0]$.
 > - **MRR@10 (Mean Reciprocal Rank):** Tập trung vào việc đo lường tốc độ tiếp cận thông tin của người dùng bằng cách tính nghịch đảo vị trí của tài liệu liên quan đầu tiên xuất hiện trong danh sách. Nếu tài liệu đúng xuất hiện ngay vị trí đầu tiên, điểm Reciprocal Rank đạt tối đa là 1.0.
@@ -288,7 +288,7 @@
 
 ---
 
-### Slide 24: Kết quả đánh giá — Bảng tổng quan (1 phút) — Người trình bày: Lam
+### Slide 24: Kết quả đánh giá — Bảng tổng quan (1 phút) — Người trình bày: An
 > "Bảng tổng hợp kết quả đánh giá trên slide thể hiện hiệu năng vượt trội của Hybrid Search. Trên cả 3 nhóm truy vấn:
 > - **BM25 và kNN đơn lẻ** chỉ đạt điểm NDCG trung bình từ 0.64 đến 0.70.
 > - **Hybrid Search sử dụng RRF** đã cải thiện vượt bậc, đạt điểm số NDCG@10 ấn tượng từ **0.94 đến 0.98**.
@@ -301,7 +301,7 @@
 
 ---
 
-### Slide 25: Kết quả đánh giá — Biểu đồ so sánh (0.5 phút) — Người trình bày: Lam
+### Slide 25: Kết quả đánh giá — Biểu đồ so sánh (0.5 phút) — Người trình bày: An
 > "Hai biểu đồ trên slide trực quan hóa điểm số NDCG@10 và MRR@10 của các phương pháp. Nhìn vào biểu đồ cột, chúng ta có thể thấy rõ khoảng cách chênh lệch lớn giữa đường biểu diễn của Hybrid Search màu xanh teal so với hai đường màu xanh blue và cam đại diện cho BM25 và kNN đơn lẻ. Sự vượt trội này diễn ra đồng đều trên cả hai độ đo chất lượng xếp hạng."
 
 **Visual Cues (Gợi ý trình chiếu):**
@@ -309,7 +309,7 @@
 
 ---
 
-### Slide 26: Phân tích chi tiết (1.5 phút) — Người trình bày: Lam
+### Slide 26: Phân tích chi tiết (1.5 phút) — Người trình bày: An
 > "Đi sâu vào phân tích chi tiết, nhóm nhận thấy một chỉ số rất thú vị: chỉ có trung bình **1.5 trên 10 tài liệu** trùng lặp giữa kết quả của BM25 và Vector search. Điều này chứng tỏ hai phương pháp này tiếp cận thông tin theo hai hướng hoàn toàn khác nhau và tìm ra các tập tài liệu bổ trợ cho nhau. Khi RRF kết hợp chúng, những tài liệu được cả hai luồng đồng thuận sẽ được đẩy lên vị trí cao nhất, đồng thời giữ lại được các tài liệu liên quan mà một trong hai phương pháp đơn lẻ bỏ sót.
 > Khi đánh giá độ ổn định theo quy mô dữ liệu từ 100K lên 1.2M bài báo, chúng em thấy điểm NDCG của BM25 giảm nhẹ từ 0.72 xuống 0.67 do nhiễu từ khóa tăng lên khi dữ liệu phình to. Ngược lại, kNN duy trì độ ổn định cao ở mức 0.66 nhờ không gian vector bền vững. Đặc biệt, Hybrid Search giữ vững hiệu năng tối ưu nhất với NDCG luôn đạt từ **0.96 đến 0.97** ở mọi quy mô dữ liệu, khẳng định tính bền vững và khả năng mở rộng tuyệt vời của kiến trúc này."
 
@@ -319,7 +319,7 @@
 
 ---
 
-### Slide 27: Latency Analysis — Bảng tổng quan (1 phút) — Người trình bày: Lam
+### Slide 27: Latency Analysis — Bảng tổng quan (1 phút) — Người trình bày: An
 > "Chuyển sang Chương 9: Đánh giá hiệu năng hệ thống. Bảng trên slide ghi nhận thời gian phản hồi thực tế của hệ thống ở các phân vị P50 và P95 qua ba quy mô dữ liệu:
 > - BM25 luôn giữ độ trễ rất thấp, tối đa chỉ 71ms P50 ở quy mô 1.2M.
 > - Đối với Hybrid Search sử dụng RRF, hệ thống đạt độ trễ ấn tượng là **99ms P50** ở quy mô tối đa 1.2 triệu bài báo khoa học.
@@ -331,7 +331,7 @@
 
 ---
 
-### Slide 28: Latency Analysis — Trực quan hóa & Thách thức (1 phút) — Người trình bày: Lam
+### Slide 28: Latency Analysis — Trực quan hóa & Thách thức (1 phút) — Người trình bày: An
 > "Tuy nhiên, trong quá trình đo đạc thực tế, nhóm đã phát hiện một thách thức lớn: ở lượt truy vấn đầu tiên trên quy mô 1.2M bài báo, độ trễ P95 của Vector Search độc lập tăng vọt lên tới **1,206 mili-giây**. Hiện tượng này gọi là **Semantic Cold Start**.
 > Nguyên nhân là do cấu trúc đồ thị HNSW của index `arxiv_vectors` quá lớn, khoảng 10.4 GB, vượt quá dung lượng Heap và phải load phân đoạn từ ổ đĩa SSD vào OS Page Cache trong lần truy vấn đầu tiên, gây nghẽn I/O. Giải pháp thực tế để khắc phục hiện tượng này là tiến hành chạy các truy vấn warmup để làm ấm cache trước khi đưa hệ thống vào phục vụ người dùng thực tế."
 
@@ -341,7 +341,7 @@
 
 ---
 
-### Slide 29: Latency Scaling — Tăng trưởng theo quy mô (1 phút) — Người trình bày: Lam
+### Slide 29: Latency Scaling — Tăng trưởng theo quy mô (1 phút) — Người trình bày: An
 > "Biểu đồ bên trái mô tả xu hướng tăng trưởng độ trễ P50 theo quy mô dữ liệu. Đường BM25 tăng trưởng tuyến tính rất chậm. Đường kNN tăng nhanh hơn do sự phức tạp của đồ thị HNSW và các thao tác đọc ghi đĩa. Đường Hybrid Search chạy song song nên độ trễ bị giới hạn bởi luồng kNN chậm hơn, tuy nhiên nhờ cấu hình tối ưu luồng chạy song song nên vẫn duy trì ở mức 99ms P50.
 > Môi trường thử nghiệm hiệu năng được cấu hình trên máy tính cá nhân dùng chip Intel Core i7 (8 nhân, 16 luồng), 16GB RAM và SSD NVMe. Elasticsearch chạy trong môi trường Docker trên nền tảng WSL2 Ubuntu."
 
@@ -351,7 +351,7 @@
 
 ---
 
-### Slide 30: Storage Analysis — Dung lượng lưu trữ (1 phút) — Người trình bày: Lam
+### Slide 30: Storage Analysis — Dung lượng lưu trữ (1 phút) — Người trình bày: An
 > "Về khía cạnh lưu trữ, bảng số liệu trên slide cho thấy dung lượng đĩa tăng trưởng tuyến tính theo số lượng tài liệu. Điểm thú vị là kích thước index vật lý trên Elasticsearch luôn nhỏ hơn dung lượng file JSONL thô sau khi nhúng (ví dụ ở quy mô 1.2M, index chỉ chiếm 11.9 GB so với file raw JSONL là 12 GB). Điều này có được nhờ cơ chế nén cột cực kỳ hiệu quả của Lucene như thuật toán LZ4 cho text và nén mảng float cho vector.
 > Ở quy mô lớn nhất 1.2M tài liệu, hệ thống áp dụng kiến trúc Dual-Index: index `arxiv_text` phục vụ BM25 chỉ nặng 1.5 GB, còn index `arxiv_vectors` phục vụ kNN nặng tới 10.4 GB. Tổng dung lượng đĩa tiêu thụ là 11.9 GB."
 
@@ -361,7 +361,7 @@
 
 ---
 
-### Slide 31: Storage Analysis — Trực quan hóa (0.5 phút) — Người trình bày: Lam
+### Slide 31: Storage Analysis — Trực quan hóa (0.5 phút) — Người trình bày: An
 > "Biểu đồ hình tròn trên slide trực quan hóa cơ cấu dung lượng lưu trữ của hệ thống. Dữ liệu vector nhúng và đồ thị HNSW chiếm tới **87%** tổng dung lượng lưu trữ đĩa cứng của Elasticsearch.
 > Điều này khẳng định chi phí lưu trữ chính của một hệ thống Hybrid Search nằm ở dữ liệu vector chứ không phải ở phần văn bản truyền thống. Việc tách biệt Dual-Index giúp giảm đáng kể áp lực bộ nhớ JVM Heap cho các truy vấn chỉ sử dụng văn bản BM25 thông thường."
 
@@ -370,7 +370,7 @@
 
 ---
 
-### Slide 32: Tóm tắt kết quả đạt được (1 phút) — Người trình bày: Lam
+### Slide 32: Tóm tắt kết quả đạt được (1 phút) — Người trình bày: An
 > "Đến với Chương 11: Kết luận. Dự án của nhóm đã đạt được 6 kết quả quan trọng:
 > 1. Xây dựng thành công **Big Data Pipeline** xử lý streaming và lọc 1.2 triệu bài báo khoa học từ arXiv không bị OOM.
 > 2. Hoàn thành **GPU Embedding Pipeline** nhúng 1.2 triệu bài báo chỉ trong **35 phút** nhờ tận dụng Tesla T4.
@@ -385,7 +385,7 @@
 
 ---
 
-### Slide 33: Hạn chế và Hướng phát triển (1 phút) — Người trình bày: Lam
+### Slide 33: Hạn chế và Hướng phát triển (1 phút) — Người trình bày: An
 > "Bên cạnh các kết quả đạt được, hệ thống vẫn tồn tại một số hạn chế nhất định:
 > - Việc gộp RRF đang được xử lý ở application layer làm tăng thêm một chút độ trễ phản hồi so với BM25 gốc.
 > - Mô hình nhúng all-MiniLM-L6-v2 tuy nhẹ nhưng có phần hạn chế khi biểu diễn các khái niệm khoa học chuyên sâu và phức tạp.
@@ -402,15 +402,21 @@
 
 ---
 
-### Slide 34: Demo hệ thống (2 phút) — Người trình bày: Lam
+### Slide 34: Demo hệ thống (2 phút) — Người trình bày: An
 > "Bây giờ, em xin phép được trình chiếu video demo thực tế ứng dụng tìm kiếm của nhóm chúng em. Giao diện web được thiết kế hiện đại, hỗ trợ người dùng tìm kiếm trực quan theo 3 chế độ độc lập: Keyword Search, Semantic Search và Hybrid Search.
-> Người dùng có thể dễ dàng lọc kết quả theo năm xuất bản và theo các danh mục thuộc Computer Science trực tiếp trên thanh công cụ lọc. Hệ thống truy vấn trực tiếp trên kho dữ liệu hơn 1.2 triệu bài báo của arXiv và trả về kết quả kèm theo tiêu đề, tên tác giả, tóm tắt nội dung, năm xuất bản và các thẻ phân loại của bài viết. Video sau đây sẽ minh họa cách hệ thống xử lý các câu truy vấn phức tạp và cho thấy sự khác biệt rõ rệt về chất lượng kết quả giữa các chế độ tìm kiếm..."
+> Người dùng có thể dễ dàng lọc kết quả theo năm xuất bản và theo các danh mục thuộc Computer Science trực tiếp trên thanh công cụ lọc. Hệ thống truy vấn trực tiếp trên kho dữ liệu hơn 1.2 triệu bài báo của arXiv và trả về kết quả kèm theo tiêu đề, tên tác giả, tóm tắt nội dung, năm xuất bản và các thẻ phân loại của bài viết. Video sau đây sẽ minh họa cách hệ thống xử lý các câu truy vấn phức tạp và cho thấy sự khác biệt rõ rệt về chất lượng kết quả giữa các chế độ tìm kiếm...
+> 
+> Đến đây em xin kết thúc phần trình bày của mình. Tiếp theo, xin mời bạn Sơn Lam giới thiệu các tài liệu tham khảo và điều phối phần Q&A của nhóm."
 
 **Visual Cues (Gợi ý trình chiếu):**
 * Chuyển sang màn hình trình chiếu video demo.
 * Thuyết minh trực tiếp các thao tác trong video: gõ query chuyên ngành, click chọn chế độ search, chọn bộ lọc năm và quan sát tốc độ trả về kết quả.
+* 🔗 **Chuyển tiếp:** Quay sang hướng tay về phía bạn Trịnh Sơn Lam để bàn giao lượt nói.
 
 ---
+
+## PHẦN 4: TÀI LIỆU THAM KHẢO & Q&A (Slide 35 - 39)
+**Người trình bày: Trịnh Sơn Lam (Lam)**
 
 ### Slide 35: Tài liệu tham khảo (0.5 phút) — Người trình bày: Lam
 > "Trên đây là danh sách các tài liệu tham khảo chính được nhóm sử dụng trong suốt quá trình nghiên cứu và phát triển dự án, bao gồm các công trình nghiên cứu kinh điển về thuật toán BM25 của Robertson, giải thuật RRF của Cormack, Sentence-BERT của Reimers, đồ thị HNSW của Malkov và tài liệu hướng dẫn chính thức của Elasticsearch."
