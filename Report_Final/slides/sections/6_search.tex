@@ -1,0 +1,168 @@
+% ============================================================
+% CHƯƠNG 7: Search Implementation — Keyword, Semantic, Hybrid
+% ============================================================
+\section{Search Implementation}
+
+% ── SLIDE 19: Keyword Search ──
+\begin{frame}[fragile]{Keyword Search --- Keyword Matching}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Query DSL}
+\begin{lstlisting}[language=Python]
+{
+  "query": {
+    "multi_match": {
+      "query": "<user_query>",
+      "fields": ["title^2",
+                 "abstract"],
+      "type": "best_fields"
+    }
+  },
+  "size": 10
+}
+\end{lstlisting}
+\end{block}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Giải thích}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{multi\_match}: Tìm trên nhiều field
+    \item \textbf{title\^{}2}: Boost title gấp 2 lần
+    \item \textbf{best\_fields}: Score theo field match tốt nhất
+    \item \textbf{Index}: \texttt{arxiv\_text} (1.5 GB)
+\end{itemize}
+}
+\end{block}
+
+\vspace{0.1cm}
+
+\begin{exampleblock}{Ưu điểm}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Nhanh: $\sim$70ms P50 ở 1.2M
+    \item Chính xác cho thuật ngữ, tên riêng
+    \item Nhẹ tài nguyên (text only)
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 20: Semantic Search ──
+\begin{frame}[fragile]{Semantic Search --- Semantic Understanding}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Query DSL}
+\begin{lstlisting}[language=Python]
+{
+  "knn": {
+    "field": "embedding",
+    "query_vector": [0.12, ...],
+    "k": 10, "num_candidates": 100
+  }
+}
+\end{lstlisting}
+\end{block}
+
+\vspace{-0.1cm}
+
+\begin{block}{Pipeline}
+{\scriptsize
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item Encode query $\to$ 384-dim vector
+    \item HNSW graph traversal
+    \item Cosine similarity ranking
+    \item Trả về top-$k$ nearest neighbors
+\end{enumerate}
+}
+\end{block}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Giải thích}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{field}: \texttt{embedding} (384-dim vector)
+    \item \textbf{k=10}: Trả về 10 kết quả gần nhất
+    \item \textbf{num\_candidates=100}: Duyệt 100 ứng viên/shard
+    \item \textbf{Index}: \texttt{arxiv\_vectors} (10.4 GB)
+\end{itemize}
+}
+\end{block}
+
+\vspace{-0.1cm}
+
+\begin{exampleblock}{Ưu điểm}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Hiểu từ đồng nghĩa, paraphrase tốt
+    \item Tìm kiếm trực tiếp bằng câu tự nhiên
+    \item VD: ``detect fake images'' $\approx$ ``deepfake''
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 21: Hybrid Search ──
+\begin{frame}{Hybrid Search --- Kết hợp tất cả}
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Cách hoạt động}
+{\scriptsize
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Parallel queries}:\\
+    Keyword $\to$ \texttt{arxiv\_text} (top 30)\\
+    Semantic $\to$ \texttt{arxiv\_vectors} (top 30)
+    \item \textbf{Extract} document IDs từ cả hai
+    \item \textbf{Compute RRF score}:\\
+    $RRF(d) = \sum \frac{1}{60 + rank(d)}$
+    \item \textbf{Sort} theo RRF score giảm dần
+    \item \textbf{Return} top 10
+    \item \textbf{Enrich} metadata qua \texttt{es.mget()}
+\end{enumerate}
+}
+\end{block}
+
+\end{column}
+\begin{column}{0.50\textwidth}
+
+\begin{exampleblock}{Kiến trúc Dual-Index}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{arxiv\_text} (1.5 GB): Chỉ từ khóa $\to$ nhanh, nhẹ
+    \item \textbf{arxiv\_vectors} (10.4 GB): Vector 384d $\to$ ngữ nghĩa qua HNSW
+    \item Tách riêng $\to$ tối ưu lưu trữ và query độc lập
+    \item Incremental ingestion: thêm bài báo mới qua API
+\end{itemize}
+}
+\end{exampleblock}
+
+\vspace{-0.1cm}
+
+\begin{block}{Tối ưu ES Indexing}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item 2 shards (giảm từ 5 để khớp số node thực)
+    \item 0 replicas (single node cho dev env)
+    \item \texttt{refresh\_interval=-1} khi bulk load
+    \item \texttt{\_forcemerge} sau bulk để tối ưu HNSW
+    \item JVM Heap: 4GB
+\end{itemize}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}

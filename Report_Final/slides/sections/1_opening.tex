@@ -1,0 +1,81 @@
+% ============================================================
+% PHẦN MỞ ĐẦU: Title, Contribution, TOC
+% ============================================================
+
+% ── SLIDE 1: Title ──
+\begin{frame}[plain]
+    \begin{center}
+        \vspace*{0.05cm}
+        \includegraphics[height=1.0cm]{hcmut.png}
+        \vspace*{0.15cm}
+        
+        % Đóng khung cả tên seminar và phần tiếng Việt phụ đề
+        {\color{accentTeal}\setlength{\fboxrule}{1.2pt}\setlength{\fboxsep}{7pt}\fbox{%
+            \begin{minipage}{0.80\textwidth}
+                \centering
+                {\large \bfseries BUILDING A HYBRID SEARCH SYSTEM\\FOR ACADEMIC DOCUMENTS USING ELASTICSEARCH}
+                
+                \vspace*{0.1cm}
+                {\small \color{textWhite} Xây dựng Hệ thống Tìm kiếm Kết hợp cho Tài liệu Học thuật sử dụng Elasticsearch}
+            \end{minipage}%
+        }}
+    \end{center}
+    
+    \vspace*{0.05cm}
+    
+    % Góc phải giữa: Tên giảng viên & sinh viên
+    \begin{flushright}
+        {\footnotesize \color{textLight}
+        \begin{tabular}{r}
+            \textcolor{textMuted}{GVHD:} PGS.TS Thoại Nam \\[0.08cm]
+            \textcolor{textMuted}{Sinh viên thực hiện:} \\
+            Dương Gia An --- 2470293 \\
+            Trịnh Sơn Lam --- 2470287 \\
+            Nguyễn Thanh Huyền --- 2570416
+        \end{tabular}
+        \hspace*{0.5cm}
+        }
+    \end{flushright}
+    
+    \vspace*{\fill}
+    
+    % Dưới cùng: Thông tin trường, khoa, môn học và ngày tháng
+    \begin{center}
+        {\scriptsize \color{textMuted}
+        Đại học Bách khoa TP.HCM --- Khoa KH \& KT Máy tính --- CO5135 --- Big Data (HK252) \\
+        Tháng 5, 2026
+        }
+    \end{center}
+\end{frame}
+
+% ── SLIDE 2: Contribution ──
+\begin{frame}{Phân công công việc}
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+{\small
+\begin{tabular}{c l p{6.8cm} c}
+\toprule
+\textbf{STT} & \textbf{Thành viên} & \textbf{Đóng góp} & \textbf{Tỷ lệ} \\
+\midrule
+1 & Dương Gia An & System Architecture, Elasticsearch Indexing, Search Pipeline, Evaluation \& Benchmarking & 33.33\% \\
+\hline
+2 & Trịnh Sơn Lam & Data Preprocessing, GPU Embedding Pipeline, Ground Truth Labeling & 33.33\% \\
+\hline
+3 & Nguyễn Thanh Huyền & Theoretical Background, Evaluation Analysis, Final Report Compilation & 33.33\% \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{frame}
+
+% ── SLIDE 3: TOC ──
+\begin{frame}{Nội dung trình bày}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\tableofcontents[sections={1-4}]
+\end{column}
+\begin{column}{0.48\textwidth}
+\tableofcontents[sections={5-8}]
+\end{column}
+\end{columns}
+\end{frame}

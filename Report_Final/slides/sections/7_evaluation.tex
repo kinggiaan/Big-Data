@@ -1,0 +1,229 @@
+% ============================================================
+% CHƯƠNG 8: Evaluation — Methodology, Metrics, Results, Analysis
+% ============================================================
+\section{Đánh giá chất lượng}
+
+% ── SLIDE 22: Methodology ──
+\begin{frame}{Phương pháp đánh giá}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Ground Truth Construction}
+{\small
+\begin{itemize}
+    \item \textbf{30 test queries}, chia 3 nhóm (10 mỗi nhóm):
+\end{itemize}
+}
+
+\vspace{0.05cm}
+
+{\scriptsize
+\begin{tabular}{l l}
+\toprule
+\textbf{Nhóm} & \textbf{Ví dụ query} \\
+\midrule
+\textcolor{accentBlue}{\textbf{A. Exact}} & ``BERT fine-tuning'' \\
+\textcolor{accentOrange}{\textbf{B. Semantic}} & ``methods to detect fake images'' \\
+\textcolor{accentTeal}{\textbf{C. Mixed}} & ``transformer for NLP tasks'' \\
+\bottomrule
+\end{tabular}
+}
+\end{block}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Quy trình gán nhãn}
+{\small
+\begin{enumerate}
+    \item \textbf{Pooling}: Top 10 từ mỗi method $\to$ merge $\to$ 15-25 candidates/query
+    \item \textbf{Silver Standard}: Majority voting\\
+    Relevant (1) nếu xuất hiện $\geq 2/3$ methods\\
+    Irrelevant (0) nếu chỉ 1 method
+    \item \textbf{Manual verification} trên tập con
+\end{enumerate}
+}
+\end{block}
+
+\vspace{0.1cm}
+
+{\footnotesize \textbf{Tổng}: 30 queries $\times$ $\sim$20 candidates $=$ $\sim$600 judgments}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 23: Metrics ──
+\begin{frame}{Metrics: NDCG@10 và MRR@10}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{NDCG@10 {\scriptsize (Normalized DCG)}}
+{\footnotesize
+\textbf{DCG@p}: Đánh giá chất lượng xếp hạng
+\[
+DCG@p = \sum_{i=1}^{p} \frac{2^{rel_i} - 1}{\log_2(i+1)}
+\]
+
+\textbf{NDCG@p}: Chuẩn hóa về [0,1]
+\[
+NDCG@p = \frac{DCG@p}{IDCG@p}
+\]
+
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item IDCG = DCG của \textit{perfect ranking}
+    \item Vị trí đầu quan trọng hơn
+    \item \textbf{1.0 = hoàn hảo}
+\end{itemize}
+}
+\end{block}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{MRR@10 {\scriptsize (Mean Reciprocal Rank)}}
+{\footnotesize
+\[
+RR = \frac{1}{rank^*}
+\]
+
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item $rank^*$ = vị trí tài liệu relevant \textbf{đầu tiên}
+    \item Nếu không có trong top 10: $RR = 0$
+    \item MRR = trung bình RR trên tất cả queries
+    \item \textbf{1.0 = luôn đúng ở vị trí 1}
+\end{itemize}
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\begin{exampleblock}{Tại sao chọn 2 metrics?}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{NDCG}: Đánh giá \textit{toàn bộ} top 10
+    \item \textbf{MRR}: Đánh giá \textit{kết quả đầu tiên}
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 24: Results Overview - Table ──
+\begin{frame}{Kết quả đánh giá --- Bảng tổng quan}
+\centering
+\renewcommand{\arraystretch}{1.1}
+{\small
+\begin{tabular}{l c c c c c c}
+\toprule
+\multirow{2}{*}{\textbf{Phương pháp}} & \multicolumn{2}{c}{\textbf{Group A (Exact)}} & \multicolumn{2}{c}{\textbf{Group B (Semantic)}} & \multicolumn{2}{c}{\textbf{Group C (Mixed)}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+& NDCG & MRR & NDCG & MRR & NDCG & MRR \\
+\midrule
+Keyword (BM25) & 0.6407 & 0.8750 & 0.6780 & 1.0000 & 0.6967 & 1.0000 \\
+Semantic (kNN) & 0.6554 & 0.9250 & 0.6632 & 1.0000 & 0.6774 & 1.0000 \\
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{\textbf{Hybrid (RRF)}} & \textcolor{accentTeal}{\textbf{0.9752}} & \textcolor{accentTeal}{\textbf{1.0000}} & \textcolor{accentTeal}{\textbf{0.9469}} & \textcolor{accentTeal}{0.9250} & \textcolor{accentTeal}{\textbf{0.9821}} & \textcolor{accentTeal}{\textbf{1.0000}} \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.05cm}
+
+\begin{block}{Nhận xét tổng quan}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Keyword (BM25)} và \textbf{Semantic (kNN)} đơn lẻ đạt hiệu năng khá tốt ($\sim$0.64 - 0.70 NDCG).
+    \item \textbf{Hybrid (RRF)} cải thiện vượt trội lên mức \textbf{0.94 - 0.98 NDCG} nhờ bù trừ điểm yếu của nhau.
+\end{itemize}
+}
+\end{block}
+\end{frame}
+
+% ── SLIDE 25: Results Overview - Charts ──
+\begin{frame}{Kết quả đánh giá --- Biểu đồ so sánh}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{center}
+\includegraphics[width=\textwidth]{ndcg_comparison.png}
+
+\vspace{0.1cm}
+{\scriptsize So sánh NDCG@10 giữa các phương thức}
+\end{center}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{center}
+\includegraphics[width=\textwidth]{mrr_comparison.png}
+
+\vspace{0.1cm}
+{\scriptsize So sánh MRR@10 giữa các phương thức}
+\end{center}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 26: Analysis ──
+\begin{frame}{Phân tích chi tiết}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Overlap Analysis}
+{\footnotesize
+Trung bình chỉ \textbf{1.5/10} docs trùng lặp giữa Keyword và Semantic
+
+\vspace{0.05cm}
+$\Rightarrow$ Hai phương pháp tìm kết quả \textbf{rất khác nhau}\\
+$\Rightarrow$ Hybrid kết hợp cả hai $\to$ NDCG tăng từ $\sim$0.67 lên $\sim$0.97
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\begin{exampleblock}{Tại sao Hybrid vượt trội?}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Keyword search tìm đúng \textbf{thuật ngữ chính xác}
+    \item Semantic search tìm đúng \textbf{ý nghĩa tương đồng}
+    \item RRF promote docs được \textbf{cả hai đồng ý}
+    \item Docs chỉ 1 method $\to$ rank thấp hơn
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Scale Stability (100K $\to$ 1.2M)}
+\centering
+\renewcommand{\arraystretch}{1.0}
+{\scriptsize
+\begin{tabular}{l c c}
+\toprule
+\textbf{Phương pháp} & \textbf{100K} & \textbf{1.2M} \\
+\midrule
+Keyword (BM25) & 0.7212 & 0.6718 {\scriptsize\textcolor{accentRed}{$\downarrow$}} \\
+Semantic (kNN) & 0.6676 & 0.6653 {\scriptsize\textcolor{textMuted}{$\approx$}} \\
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{Hybrid (RRF)} & \textcolor{accentTeal}{0.9626} & \textcolor{accentTeal}{0.9681} {\scriptsize\textcolor{accentTeal}{$\approx$}} \\
+\bottomrule
+\end{tabular}
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\begin{alertblock}{Key Insights}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Keyword search \textbf{giảm nhẹ} khi scale (noise tăng)
+    \item Semantic search \textbf{ổn định} (vector space bền vững)
+    \item Hybrid \textbf{ổn định nhất}: NDCG $\sim$0.96-0.97 ở mọi scale
+\end{itemize}
+}
+\end{alertblock}
+
+\end{column}
+\end{columns}
+\end{frame}

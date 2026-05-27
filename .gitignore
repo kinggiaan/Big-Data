@@ -45,6 +45,15 @@ Thumbs.db
 # Logs
 *.log
 
+# LaTeX
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.synctex.gz
+
 # Data directory: see data/.gitignore (large/generated files stay local)
 node_modules/
 **/node_modules/

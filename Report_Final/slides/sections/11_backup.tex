@@ -1,0 +1,165 @@
+% ============================================================
+% BACKUP SLIDES (Appendix)
+% ============================================================
+\appendix
+\section{Phụ lục (Backup Slides)}
+
+% ── BACKUP 1: Latency & Storage Detail ──
+\begin{frame}{Backup: Latency \& Storage --- Chi tiết}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+
+\begin{block}{Latency chi tiết}
+\centering
+{\scriptsize
+\begin{tabular}{l *{6}{c}}
+\toprule
+\multirow{2}{*}{\textbf{Method}} & \multicolumn{2}{c}{\textbf{100K}} & \multicolumn{2}{c}{\textbf{500K}} & \multicolumn{2}{c}{\textbf{1.2M}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+& P50 & P95 & P50 & P95 & P50 & P95 \\
+\midrule
+Keyword (BM25) & 15.3 & 56.4 & 20.6 & 37.1 & 70.6 & 152.6 \\
+Semantic (kNN) & 12.8 & 34.2 & 20.3 & 41.4 & 191.3 & 1205.8 \\
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{Hybrid (RRF)} & \textcolor{accentTeal}{29.8} & \textcolor{accentTeal}{53.1} & \textcolor{accentTeal}{42.4} & \textcolor{accentTeal}{62.1} & \textcolor{accentTeal}{99.0} & \textcolor{accentTeal}{156.4} \\
+\bottomrule
+\end{tabular}
+}
+{\scriptsize (ms)}
+\end{block}
+
+\end{column}
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Trade-off Analysis}
+{\scriptsize
+\begin{tabular}{l c c}
+\toprule
+\textbf{Method} & \textbf{Chi phí} & \textbf{Chất lượng} \\
+\midrule
+Keyword (BM25) & Thấp (1.5GB) & Trung bình \\
+Semantic (kNN) & Cao (10.4GB) & Ổn định \\
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{Hybrid (RRF)} & Cao (11.9GB) & \textcolor{accentTeal}{\textbf{Tốt nhất}} \\
+\bottomrule
+\end{tabular}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── BACKUP 2: BM25 Step-by-step ──
+\begin{frame}{Backup: Keyword Search (BM25) --- Ví dụ tính điểm step-by-step}
+
+\textbf{Query:} ``attention mechanism'' \quad {\small Corpus: 1.2M papers}
+
+\vspace{0.2cm}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Bước 1: Analyze query}
+{\scriptsize
+\texttt{attention mechanism}\\
+$\downarrow$ Analyzer: lowercase $\to$ stemming\\
+$\to$ Tokens: \texttt{[attent, mechan]}
+}
+\end{block}
+
+\begin{block}{Bước 2: Tra Inverted Index}
+{\scriptsize
+\texttt{attent} $\to$ $\{D_{42}, D_{107}, D_{1580}, ...\}$\\
+\texttt{mechan} $\to$ $\{D_{42}, D_{305}, D_{8921}, ...\}$\\
+Giao tập $\to$ $\{D_{42}, ...\}$
+}
+\end{block}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{exampleblock}{Bước 3: Tính BM25}
+{\scriptsize Với $D_{42}$ (``Attention Is All You Need''):
+\begin{itemize}
+    \item TF(attent, title) = 1
+    \item IDF(attent) = 4.2 {\tiny(từ hiếm)}
+    \item Title boost $\times 2$
+    \item $\Rightarrow$ Score = \textbf{12.8}
+\end{itemize}
+}
+\end{exampleblock}
+
+\vspace{0.1cm}
+
+\begin{alertblock}{Khi Keyword search thất bại}
+{\scriptsize ``methods to detect fake images'' \\
+$\to$ Không match ``deepfake detection'' \\
+vì \textbf{0 từ khóa chung!} Cần Semantic Search.}
+\end{alertblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── BACKUP 3: Dual-Index Detail ──
+\begin{frame}{Backup: Kiến trúc Dual-Index --- Chi tiết}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{\texttt{arxiv\_text} (BM25 Index)}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Dung lượng}: 1.5 GB
+    \item \textbf{Fields}: id, title, abstract, categories, authors, year
+    \item \textbf{Cấu trúc}: Inverted Index
+    \item \textbf{Query}: \texttt{multi\_match}
+    \item \textbf{Analyzers}: standard, english
+\end{itemize}
+}
+\end{block}
+
+\vspace{-0.1cm}
+
+\begin{exampleblock}{Tại sao tách index?}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Keyword search chỉ cần text $\to$ 1.5GB
+    \item Nếu gộp vector $\to$ 11.9GB cho Keyword search
+    \item Tách giúp Keyword search nhanh hơn
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{\texttt{arxiv\_vectors} (kNN Index)}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Dung lượng}: 10.4 GB
+    \item \textbf{Fields}: metadata + \texttt{embedding}
+    \item \textbf{Vector}: \texttt{dense\_vector}, 384 dims
+    \item \textbf{Similarity}: cosine
+    \item \textbf{Graph}: HNSW (M=16, ef=100)
+\end{itemize}
+}
+\end{block}
+
+\vspace{-0.1cm}
+
+\begin{block}{Incremental Ingestion}
+{\scriptsize
+\texttt{POST /api/ingest} thêm bài báo mới:
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item Tạo vector nhúng qua model MiniLM
+    \item Ghi vào index \texttt{arxiv\_text}
+    \item Ghi vào index \texttt{arxiv\_vectors}
+    \item Refresh cả hai index để sẵn sàng tìm kiếm
+\end{enumerate}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}

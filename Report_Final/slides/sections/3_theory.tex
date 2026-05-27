@@ -1,0 +1,224 @@
+% ============================================================
+% CHƯƠNG 4: Cơ sở lý thuyết — ES, BM25, Embedding/HNSW, RRF
+% ============================================================
+\section{Cơ sở lý thuyết}
+
+% ── SLIDE 9: ES & Inverted Index ──
+\begin{frame}{Elasticsearch và Inverted Index}
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Elasticsearch}
+{\small
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Công cụ tìm kiếm phân tán (Apache Lucene)
+    \item Hỗ trợ \textbf{full-text} + \textbf{vector search}
+    \item REST API, sharding, replication
+    \item ES \textbf{8.12}: hỗ trợ kNN + RRF native
+\end{itemize}
+}
+\end{block}
+
+\vspace{0.1cm}
+
+{\small\textbf{Forward Index (quét tuần tự):}}
+
+{\scriptsize
+\begin{tabular}{l|l}
+\textcolor{accentTeal}{\textbf{Doc}} & \textcolor{accentTeal}{\textbf{Nội dung}} \\
+\hline
+$D_1$ & deep learning for NLP \\
+$D_2$ & deep neural networks \\
+$D_3$ & NLP with transformers \\
+\end{tabular}
+
+\textcolor{textLight}{$\to$ Quét tuần tự $\to$ $O(N)$}
+}
+
+\end{column}
+\begin{column}{0.50\textwidth}
+
+\begin{exampleblock}{Inverted Index (tra ngược)}
+\centering
+{\small
+\begin{tabular}{l|l}
+\textcolor{accentTeal}{\textbf{Term}} & \textcolor{accentTeal}{\textbf{Posting List}} \\
+\hline
+deep & $[D_1, D_2]$ \\
+learning & $[D_1]$ \\
+NLP & $[D_1, D_3]$ \\
+neural & $[D_2]$ \\
+transformers & $[D_3]$ \\
+\end{tabular}
+}
+
+\vspace{0.1cm}
+{\small\textcolor{accentTeal}{$\to$ Tra bảng ngay $\to$ $O(1)$ lookup!}}
+\end{exampleblock}
+
+\vspace{0.1cm}
+{\footnotesize
+\textbf{Ứng dụng thực tế}:\\
+Google, Elasticsearch, Apache Solr, Lucene, Wikipedia, Stack Overflow...
+}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 10: BM25 ──
+\begin{frame}{Keyword Search --- Thuật toán xếp hạng BM25}
+
+\begin{block}{Công thức BM25 {\scriptsize (Robertson \& Zaragoza, 2009)}}
+\vspace{-0.1cm}
+\[
+\text{BM25}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
+\]
+\vspace{-0.1cm}
+\end{block}
+
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+{\small
+\textbf{Ba yếu tố quyết định:}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textcolor{accentBlue}{\textbf{TF}}: Xuất hiện nhiều $\to$ bão hòa (saturation)
+    \item \textcolor{accentOrange}{\textbf{IDF}}: Từ hiếm $\to$ trọng số cao\\VD: ``transformer'' $\gg$ ``the''
+    \item \textcolor{accentPurple}{\textbf{Doc Length}}: Tài liệu dài bị phạt
+\end{itemize}
+Tham số chuẩn: $k_1 = 1.2$, $b = 0.75$
+}
+\end{column}
+\begin{column}{0.50\textwidth}
+
+\begin{alertblock}{Hạn chế cốt lõi}
+{\small BM25 chỉ hiểu \textbf{từ vựng}, không hiểu \textbf{ngữ nghĩa}:
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item ``car'' $\neq$ ``automobile''
+    \item ``detect fake images'' $\neq$ ``deepfake''
+\end{itemize}
+}
+\end{alertblock}
+
+\vspace{0.05cm}
+{\footnotesize
+\textbf{Ứng dụng}: ES, OpenSearch, Solr, Lucene, SQLite FTS5. Mặc định cho keyword search.}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 11: Embedding & HNSW ──
+\begin{frame}{Semantic Search --- Sentence Embedding và HNSW}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+
+\begin{block}{Lịch sử Embedding}
+{\small
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Word2Vec} (2013): Mỗi \textit{từ} $\to$ 1 vector
+    \item \textbf{BERT} (2018): Hiểu \textit{ngữ cảnh}
+    \item \textbf{Sentence Transformers} (2019):\\Mỗi \textit{câu/đoạn} $\to$ 1 vector
+\end{enumerate}
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\textbf{Cosine Similarity:}
+$\;\cos(\vec{a}, \vec{b}) = \dfrac{\vec{a} \cdot \vec{b}}{\|\vec{a}\| \cdot \|\vec{b}\|} \in [-1, 1]$
+
+\vspace{0.1cm}
+{\footnotesize Văn bản tương đồng ngữ nghĩa $\to$ vector \textbf{gần nhau} trong không gian.}
+
+\end{column}
+\begin{column}{0.46\textwidth}
+
+\begin{exampleblock}{HNSW {\scriptsize (Malkov \& Yashunin, 2018)}}
+{\small
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{H}ierarchical \textbf{N}avigable \textbf{S}mall \textbf{W}orld
+    \item Đồ thị đa tầng (tương tự Skip List)
+    \item Lớp trên: nhảy xa, định vị nhanh
+    \item Lớp dưới: chi tiết, chính xác
+    \item Phức tạp: $O(N) \to O(\log N)$
+\end{itemize}
+}
+\end{exampleblock}
+
+\vspace{0.05cm}
+
+{\small
+\textbf{Tham số HNSW (ES 8.12):}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \texttt{M} = 16 (kết nối/node)
+    \item \texttt{ef\_construction} = 100
+    \item \texttt{similarity} = cosine
+\end{itemize}
+}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 12: RRF ──
+\begin{frame}{Hybrid Search --- Reciprocal Rank Fusion (RRF)}
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Công thức RRF {\scriptsize (Cormack et al., SIGIR 2009)}}
+\[
+\boxed{RRF(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}}
+\]
+\end{block}
+
+\vspace{0.05cm}
+{\footnotesize
+\textbf{Đặc trưng:}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Chỉ dùng \textbf{thứ hạng}, bỏ qua score
+    \item Không cần normalize (BM25: 0--30, kNN: 0--1)
+    \item Hằng số làm mịn $k = 60$
+    \item \textbf{Parameter-free} --- không cần tune weight
+\end{itemize}
+}
+
+\vspace{0.05cm}
+{\scriptsize\textcolor{accentTeal}{\textbf{RRF} là mặc định trong ES 8.x, Azure AI Search.}}
+
+\end{column}
+\begin{column}{0.50\textwidth}
+
+\textbf{Ví dụ:} Query ``transformer for NLP''
+
+\vspace{0.1cm}
+
+{\scriptsize
+\begin{tabular}{c|c}
+\textcolor{accentBlue}{\textbf{Keyword}} & \textcolor{accentOrange}{\textbf{Semantic}} \\
+\hline
+1: $D_A$ & 1: $D_C$ \\
+2: $D_B$ & 2: $D_A$ \\
+3: $D_C$ & 3: $D_F$ \\
+\end{tabular}
+}
+
+\vspace{0.1cm}
+
+\begin{exampleblock}{\small\textcolor{accentTeal}{Hybrid Search (RRF Merge)} ($k=60$)}
+{\scriptsize
+\begin{tabular}{cll}
+\textbf{\#} & \textbf{Doc} & \textbf{RRF Score} \\
+\hline
+\textbf{1} & $D_A$ & $\frac{1}{61} {+} \frac{1}{62} = \mathbf{0.0325}$ \\[2pt]
+\textbf{2} & $D_C$ & $\frac{1}{63} {+} \frac{1}{61} = 0.0323$ \\[2pt]
+3 & $D_B$ & $\frac{1}{62} = 0.0161$ \\
+\end{tabular}
+}
+\end{exampleblock}
+
+{\scriptsize\textcolor{accentTeal}{Doc xuất hiện ở \textbf{cả hai} $\to$ score cao nhất}}
+
+\end{column}
+\end{columns}
+\end{frame}

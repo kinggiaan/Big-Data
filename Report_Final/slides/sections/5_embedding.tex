@@ -1,0 +1,175 @@
+% ============================================================
+% CHƯƠNG 6: Embedding Pipeline — Model Selection, GPU, Checkpoint
+% ============================================================
+\section{Embedding Pipeline}
+
+% ── SLIDE 16: Model Selection ──
+\begin{frame}{Lựa chọn Embedding Model}
+\centering
+\renewcommand{\arraystretch}{1.05}
+{\small
+\begin{tabular}{l c c c l}
+\toprule
+\textbf{Model} & \textbf{Dims} & \textbf{MTEB} & \textbf{Params} & \textbf{Ghi chú} \\
+\midrule
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{\textbf{all-MiniLM-L6-v2}} & \textcolor{accentTeal}{\textbf{384}} & \textcolor{accentTeal}{\textbf{56}} & \textcolor{accentTeal}{\textbf{22M}} & \textcolor{accentTeal}{\textbf{Nhanh, nhẹ, cân bằng}} \\
+bge-small-en-v1.5 & 384 & 62 & 33M & BAAI, chất lượng cao \\
+e5-large-v2 & 1024 & 64 & 335M & Microsoft, nặng \\
+SPECTER2 & 768 & --- & 110M & Chuyên academic \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.1cm}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{exampleblock}{Lý do chọn MiniLM-L6-v2}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{384 dims}: Tiết kiệm RAM \& storage
+    \item \textbf{22M params}: Chạy được trên Colab free
+    \item \textbf{14K+ sentences/sec} (GPU)
+    \item Cân bằng tốt giữa chất lượng và tốc độ
+\end{itemize}
+}
+\end{exampleblock}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{block}{Đầu vào model}
+{\footnotesize
+$T_{\text{input}} = \text{Title} \;\|\; \text{[SEP]} \;\|\; \text{Abstract}$
+
+\vspace{0.05cm}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Token limit: 256 tokens
+    \item Title: $\sim$15 tokens
+    \item Abstract budget: 240 tokens $\approx$ 960 chars
+    \item Cắt theo ranh giới câu (smart truncation)
+\end{itemize}
+}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 17: GPU Pipeline ──
+\begin{frame}{GPU Acceleration và Batch Processing}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{alertblock}{Vấn đề: CPU quá chậm}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item CPU: \textbf{5-10 docs/sec}
+    \item 1.2M docs $\to$ \textbf{33-66 giờ!}
+    \item Không khả thi cho Big Data
+\end{itemize}
+}
+\end{alertblock}
+
+\vspace{0.05cm}
+
+\begin{exampleblock}{Giải pháp: Google Colab + GPU}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Tesla T4} (16GB VRAM)
+    \item \textbf{500-800 docs/sec} ($\sim$80x nhanh hơn)
+    \item Batch size: \textbf{512}
+    \item Dynamic padding (tiết kiệm VRAM)
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Kỹ thuật tối ưu}
+{\footnotesize
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Batch Processing}: 512 docs/batch, encode song song
+    \item \textbf{Dynamic Padding}: Pad theo batch dài nhất
+    \item \textbf{Smart Truncation}: Giữ ranh giới câu $\leq$ 960 chars
+    \item \textbf{tqdm Progress}: Theo dõi tiến trình real-time
+\end{enumerate}
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\centering
+\renewcommand{\arraystretch}{0.95}
+{\footnotesize
+\begin{tabular}{l r}
+\toprule
+\textbf{Chỉ số} & \textbf{Giá trị} \\
+\midrule
+Tổng tài liệu & 1,203,108 \\
+Thời gian & \textcolor{accentTeal}{\textbf{$\sim$35 phút}} \\
+Output & 11.05 GB JSONL \\
+\bottomrule
+\end{tabular}
+}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 18: Checkpoint ──
+\begin{frame}{Checkpoint \& Resume + Kết quả}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Cơ chế Checkpoint}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Lưu \texttt{progress.json} mỗi \textbf{50,000 docs}
+    \item Backup lên \textbf{Google Drive} (Colab)
+    \item Tự động resume khi bị disconnect
+    \item Không mất dữ liệu đã xử lý
+\end{itemize}
+}
+\end{block}
+
+\vspace{0.05cm}
+
+\begin{exampleblock}{Tại sao cần Checkpoint?}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Google Colab có \textbf{timeout} (12h free)
+    \item Network disconnect bất kỳ lúc nào
+    \item 1.2M docs = nhiều batch $\to$ cần fault tolerance
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{block}{Tổng kết Embedding Pipeline}
+\centering
+\renewcommand{\arraystretch}{1.0}
+{\footnotesize
+\begin{tabular}{l r}
+\toprule
+\textbf{Chỉ số} & \textbf{Giá trị} \\
+\midrule
+Model & MiniLM-L6-v2 \\
+Dimensions & 384 \\
+Parameters & 22M \\
+Hardware & Tesla T4 (16GB) \\
+Batch size & 512 \\
+Tốc độ & 500-800 docs/sec \\
+Tổng tài liệu & 1,203,108 \\
+Thời gian & \textbf{$\sim$35 phút} \\
+Output file & 11.05 GB \\
+Checkpoint & /50K docs \\
+\bottomrule
+\end{tabular}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
