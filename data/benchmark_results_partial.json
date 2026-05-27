@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-05-22T15:40:28.691703",
+  "es_url": "http://localhost:9200",
+  "num_queries": 20,
+  "topk": 10,
+  "strategy": "sequential (index → benchmark → delete → next)",
+  "indices": [
+    {
+      "label": "100k",
+      "index": "arxiv_bench",
+      "index_info": {
+        "doc_count": 100000,
+        "size_mb": 860.8,
+        "indexing_time_sec": 151.2,
+        "indexing_speed_docs_per_sec": 661.0,
+        "errors": 0
+      },
+      "jvm": {
+        "heap_used_mb": 337.8,
+        "heap_max_mb": 4096.0,
+        "heap_percent": 8
+      },
+      "bm25": {
+        "avg_ms": 21.2,
+        "p50_ms": 15.3,
+        "p95_ms": 56.4,
+        "p99_ms": 58.6,
+        "min_ms": 9.8,
+        "max_ms": 59.2
+      },
+      "knn": {
+        "avg_ms": 16.9,
+        "p50_ms": 12.8,
+        "p95_ms": 34.2,
+        "p99_ms": 44.4,
+        "min_ms": 9.7,
+        "max_ms": 46.9
+      },
+      "hybrid_rrf": {
+        "avg_ms": 33.0,
+        "p50_ms": 29.8,
+        "p95_ms": 53.1,
+        "p99_ms": 66.7,
+        "min_ms": 21.0,
+        "max_ms": 70.0
+      }
+    },
+    {
+      "label": "500k",
+      "index": "arxiv_bench",
+      "index_info": {
+        "doc_count": 500000,
+        "size_mb": 4379.8,
+        "indexing_time_sec": 690.4,
+        "indexing_speed_docs_per_sec": 724.0,
+        "errors": 0
+      },
+      "jvm": {
+        "heap_used_mb": 168.5,
+        "heap_max_mb": 4096.0,
+        "heap_percent": 4
+      },
+      "bm25": {
+        "avg_ms": 24.7,
+        "p50_ms": 20.6,
+        "p95_ms": 37.1,
+        "p99_ms": 47.2,
+        "min_ms": 16.0,
+        "max_ms": 49.7
+      },
+      "knn": {
+        "avg_ms": 25.0,
+        "p50_ms": 20.3,
+        "p95_ms": 41.4,
+        "p99_ms": 82.1,
+        "min_ms": 15.9,
+        "max_ms": 92.3
+      },
+      "hybrid_rrf": {
+        "avg_ms": 43.3,
+        "p50_ms": 42.4,
+        "p95_ms": 62.1,
+        "p99_ms": 66.4,
+        "min_ms": 31.7,
+        "max_ms": 67.5
+      }
+    },
+    {
+      "label": "1M",
+      "index": "arxiv_bench",
+      "index_info": {
+        "doc_count": 1000000,
+        "size_mb": 13222.0,
+        "indexing_time_sec": 1384.4,
+        "indexing_speed_docs_per_sec": 722.0,
+        "errors": 0
+      },
+      "jvm": {
+        "heap_used_mb": 2112.3,
+        "heap_max_mb": 4096.0,
+        "heap_percent": 51
+      },
+      "bm25": {
+        "avg_ms": 50.2,
+        "p50_ms": 46.6,
+        "p95_ms": 82.8,
+        "p99_ms": 109.2,
+        "min_ms": 20.5,
+        "max_ms": 115.8
+      },
+      "knn": {
+        "avg_ms": 63.8,
+        "p50_ms": 48.3,
+        "p95_ms": 159.5,
+        "p99_ms": 219.2,
+        "min_ms": 34.1,
+        "max_ms": 234.1
+      },
+      "hybrid_rrf": {
+        "avg_ms": 77.3,
+        "p50_ms": 78.0,
+        "p95_ms": 91.7,
+        "p99_ms": 94.3,
+        "min_ms": 55.3,
+        "max_ms": 95.0
+      }
+    }
+  ]
+}
