@@ -107,14 +107,14 @@ function App() {
               onClick={() => setMode('bm25')}
               type="button"
             >
-              📝 BM25
+              📝 Keyword Search
             </button>
             <button
               className={`mode-btn ${mode === 'knn' ? 'active' : ''}`}
               onClick={() => setMode('knn')}
               type="button"
             >
-              🧠 kNN
+              🧠 Semantic Search
             </button>
           </div>
           
@@ -170,7 +170,9 @@ function App() {
             <span className="stat-label">Latency</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{mode.toUpperCase()}</span>
+            <span className="stat-value">
+              {mode === 'hybrid' ? 'Hybrid' : mode === 'bm25' ? 'Keyword' : 'Semantic'}
+            </span>
             <span className="stat-label">Mode</span>
           </div>
         </div>
