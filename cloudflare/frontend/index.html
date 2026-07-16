@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Paper Search Engine</title>
+    <meta name="description" content="Hybrid search engine for academic papers using BM25, semantic kNN, and Reciprocal Rank Fusion on Cloudflare's edge network.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🔬</span>
+                    <div>
+                        <h1 id="app-title">Academic Paper Search</h1>
+                        <p class="subtitle" id="doc-count">Hybrid search over arXiv CS papers — BM25 + kNN + RRF</p>
+                    </div>
+                </div>
+                <div class="badge">
+                    <span class="badge-dot"></span>
+                    Powered by Cloudflare
+                </div>
+            </div>
+        </header>
+
+        <!-- Search Section -->
+        <main class="main">
+            <div class="search-container">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="M21 21l-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Search papers... e.g. efficient attention mechanism for long sequences" autocomplete="off">
+                    <button id="search-btn" class="search-btn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M5 12h14M12 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls">
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="hybrid" id="mode-hybrid">
+                            <span class="mode-icon">⚡</span> Hybrid (RRF)
+                        </button>
+                        <button class="mode-btn" data-mode="bm25" id="mode-bm25">
+                            <span class="mode-icon">📝</span> BM25
+                        </button>
+                        <button class="mode-btn" data-mode="knn" id="mode-knn">
+                            <span class="mode-icon">🧠</span> kNN
+                        </button>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Results</label>
+                        <select id="result-size" class="control-select">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                    <button class="filter-toggle" id="filter-toggle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
+                        </svg>
+                        Filters
+                    </button>
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="filters-panel" id="filters-panel" style="display: none;">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <input type="checkbox" id="year-filter-check"> Filter by year range
+                            </label>
+                            <div class="year-range" id="year-range-container" style="display: none;">
+                                <input type="number" id="year-min" class="year-input" placeholder="From" min="1990" max="2026">
+                                <span class="year-sep">—</span>
+                                <input type="number" id="year-max" class="year-input" placeholder="To" min="1990" max="2026">
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Categories</label>
+                            <div class="category-chips" id="category-chips">
+                                <span class="loading-text">Loading categories...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="stats-bar" style="display: none;">
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-results">0</span>
+                    <span class="stat-label">Results</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-latency">0ms</span>
+                    <span class="stat-label">Latency</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-mode">Hybrid</span>
+                    <span class="stat-label">Mode</span>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="results" id="results">
+                <!-- Empty state -->
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <h2>Search Academic Papers</h2>
+                    <p>Enter a query above to search through arXiv Computer Science papers using hybrid keyword + semantic search.</p>
+                    <div class="example-queries">
+                        <p class="example-label">Try these:</p>
+                        <button class="example-btn" data-query="efficient attention mechanism for long sequences">efficient attention mechanism</button>
+                        <button class="example-btn" data-query="graph neural networks">graph neural networks</button>
+                        <button class="example-btn" data-query="approximate nearest neighbor search">nearest neighbor search</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Chart -->
+            <div class="chart-container" id="chart-container" style="display: none;">
+                <h3 class="chart-title">Top Categories in Results</h3>
+                <div class="chart" id="chart"></div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with Cloudflare Workers, D1, Vectorize & Workers AI</p>
+            <p class="footer-sub">HK252 Big Data — Hybrid Search for Academic Papers</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

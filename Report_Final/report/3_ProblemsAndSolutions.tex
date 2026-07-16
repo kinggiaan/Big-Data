@@ -1,0 +1,21 @@
+\chapter{Vấn đề và Giải pháp (Problems \& Proposed Solutions)}
+
+\section{Problem 1: Sự cứng nhắc của tìm kiếm từ khóa (The Rigidity of Keyword Search)}
+\textbf{Vấn đề:} Các hệ thống tìm kiếm dựa trên từ khóa truyền thống hoạt động theo cơ chế đối khớp chuỗi ký tự (string matching). Người dùng phải gõ chính xác từ khóa xuất hiện trong tài liệu. Các từ đồng nghĩa (synonyms), cách diễn đạt khác (rephrasing), hoặc biến thể ngữ pháp đều không được nhận diện. Ví dụ: truy vấn \textit{``methods to detect fake images''} sẽ không trả về các bài báo chứa \textit{``deepfake detection''} hoặc \textit{``generative adversarial network forensics''}, dù chúng có nội dung liên quan trực tiếp.
+
+\textbf{Hướng giải pháp:} Tích hợp \textbf{Vector Search} bên cạnh BM25 truyền thống. Ý tưởng cốt lõi là chuyển đổi toàn bộ tài liệu và câu truy vấn thành các vector số thực trong không gian ngữ nghĩa đa chiều bằng mô hình học sâu (Sentence Transformer). Khi đó, việc tìm kiếm trở thành bài toán tìm các vector gần nhất (nearest neighbors) trong không gian này --- cho phép hệ thống hiểu được \textit{ý nghĩa ngữ cảnh} thay vì chỉ khớp từng từ. Giải thuật HNSW \cite{malkov2018hnsw} đảm bảo tốc độ tìm kiếm $O(\log N)$ ngay cả trên tập dữ liệu hàng triệu tài liệu.
+
+\section{Problem 2: AI bỏ sót các thuật ngữ chuyên ngành (AI Misses Specialized Terminology)}
+\textbf{Vấn đề:} Các mô hình AI hiểu ngữ cảnh tốt nhưng lại kém chính xác khi người dùng cần tìm kiếm đích danh một thuật ngữ viết tắt hiếm gặp (ví dụ: \textit{``ViT-B/16''}), tên tác giả cụ thể (\textit{``Vaswani et al.''}), hoặc ký hiệu toán học. Mô hình nhúng có xu hướng ``mờ hóa'' (blur) các thuật ngữ ngắn và chuyên biệt vào không gian ngữ nghĩa chung, dẫn đến mất tính chính xác tuyệt đối --- một yếu tố sống còn trong nghiên cứu khoa học.
+
+\textbf{Hướng giải pháp:} Thay vì chỉ dựa vào một phương pháp, hệ thống chạy \textbf{song song cả hai luồng} tìm kiếm và gộp kết quả bằng thuật toán \textbf{Reciprocal Rank Fusion (RRF)} \cite{cormack2009rrf}:
+\begin{itemize}
+    \item BM25 đảm nhận đối khớp chính xác từ khóa qua Inverted Index --- đảm bảo không bỏ sót các thuật ngữ viết tắt và tên riêng.
+    \item Vector search đảm nhận đối khớp ngữ nghĩa qua Cosine Similarity --- bổ sung các tài liệu liên quan mà BM25 bỏ lỡ.
+    \item RRF gộp hai danh sách kết quả dựa trên \textit{thứ hạng} (không phải điểm số, vốn có thang đo khác nhau giữa hai phương pháp), đẩy các tài liệu được cả hai phương pháp đồng thuận lên đầu kết quả.
+\end{itemize}
+
+\section{Problem 3: Nhiễu tìm kiếm đa ngành (Search Skewed by Multidisciplinary Noise)}
+\textbf{Vấn đề:} Tập dữ liệu arXiv chứa hơn 1.2 triệu bài báo thuộc nhiều lĩnh vực phụ của Khoa học Máy tính (cs.AI, cs.CV, cs.CL, cs.SE, \ldots). Một từ khóa như \textit{``transformer''} có thể xuất hiện trong hàng chục nghìn bài báo thuộc nhiều lĩnh vực khác nhau (NLP, Computer Vision, Robotics, \ldots). Nếu không có bộ lọc siêu dữ liệu (metadata filters), người dùng bị ngập trong kết quả nhiễu không thuộc lĩnh vực quan tâm. Hơn nữa, việc áp dụng bộ lọc cứng (năm, danh mục) lên hệ thống AI vector thường gây ra xung đột kiến trúc: bộ lọc phải được thực thi \textit{trước} hoặc \textit{sau} tìm kiếm vector, dẫn đến mất kết quả hoặc tăng độ trễ.
+
+\textbf{Hướng giải pháp:} Sử dụng Elasticsearch với cơ chế \textbf{lọc tích hợp (Integrated Filtering)} ở cấp truy vấn DSL. Các trường siêu dữ liệu (năm, danh mục) được đánh chỉ mục dưới dạng \texttt{keyword}, cho phép exact-match filtering diễn ra \textit{đồng thời} với tìm kiếm BM25 và Vector thay vì hậu xử lý. Elasticsearch tự động chuyển đổi giữa các thuật toán quét (scanning algorithms) dựa trên độ nghiêm ngặt (selectivity) của bộ lọc, đảm bảo phản hồi nhanh và chính xác mà không cần can thiệp thủ công. Giao diện tìm kiếm cho phép người dùng thu hẹp phạm vi tìm kiếm theo khoảng năm và danh mục trực tiếp trên thanh công cụ.

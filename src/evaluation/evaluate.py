@@ -19,7 +19,8 @@ from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
 ES_URL = "http://localhost:9200"
-INDEX = "arxiv_papers_v2"
+INDEX_TEXT = "arxiv_text"
+INDEX_VECTORS = "arxiv_vectors"
 QUERIES_FILE = "data/test_queries.json"
 GROUND_TRUTH_FILE = "data/ground_truth.json"
 OUTPUT_FILE = "data/evaluation_results.json"
@@ -36,9 +37,10 @@ def percentile(data, p):
 
 
 def run_bm25(es, query, size=TOP_K):
+    """BM25 search on the text index (no embeddings)."""
     start = time.perf_counter()
     resp = es.search(
-        index=INDEX,
+        index=INDEX_TEXT,
         query={"multi_match": {"query": query, "fields": ["title^2", "abstract"]}},
         size=size,
         _source=["title"],
@@ -48,30 +50,32 @@ def run_bm25(es, query, size=TOP_K):
 
 
 def run_knn(es, model, query, size=TOP_K):
+    """kNN search on the vectors index."""
     vec = model.encode(query, normalize_embeddings=True).tolist()
     start = time.perf_counter()
     resp = es.search(
-        index=INDEX,
+        index=INDEX_VECTORS,
         knn={"field": "embedding", "query_vector": vec, "k": size, "num_candidates": 100},
         size=size,
-        _source=["title"],
+        _source=False,
     )
     latency = (time.perf_counter() - start) * 1000
     return [h["_id"] for h in resp["hits"]["hits"]], latency
 
 
 def run_hybrid(es, model, query, size=TOP_K):
+    """Hybrid search: BM25 on text index + kNN on vectors index, merged with RRF."""
     vec = model.encode(query, normalize_embeddings=True).tolist()
     start = time.perf_counter()
     bm25_resp = es.search(
-        index=INDEX,
+        index=INDEX_TEXT,
         query={"multi_match": {"query": query, "fields": ["title^2", "abstract"]}},
         size=30, _source=["title"],
     )
     knn_resp = es.search(
-        index=INDEX,
+        index=INDEX_VECTORS,
         knn={"field": "embedding", "query_vector": vec, "k": 30, "num_candidates": 100},
-        size=30, _source=["title"],
+        size=30, _source=False,
     )
 
     scores = {}
@@ -145,9 +149,13 @@ def load_ground_truth(path: str):
 
 
 def main():
+    global ES_URL, INDEX_TEXT, INDEX_VECTORS, QUERIES_FILE, GROUND_TRUTH_FILE, OUTPUT_FILE, RRF_K, TOP_K
     parser = argparse.ArgumentParser(description="Evaluate BM25/kNN/Hybrid quality and latency (optional NDCG/MRR).")
     parser.add_argument("--es-url", default=ES_URL, help="Elasticsearch URL")
-    parser.add_argument("--index", default=INDEX, help="Index name to evaluate (default: arxiv_papers_v2)")
+    parser.add_argument("--text-index", default=INDEX_TEXT, help="Text index for BM25 (default: arxiv_text)")
+    parser.add_argument("--vector-index", default=INDEX_VECTORS, help="Vector index for kNN (default: arxiv_vectors)")
+    # Legacy: --index sets both text and vector index to the same value
+    parser.add_argument("--index", default=None, help="Legacy: single index for both BM25 and kNN")
     parser.add_argument("--queries", default=QUERIES_FILE, help="Test queries JSON file")
     parser.add_argument("--ground-truth", default=GROUND_TRUTH_FILE, help="Optional relevance labels JSON file")
     parser.add_argument("--output", default=OUTPUT_FILE, help="Output evaluation results JSON")
@@ -155,9 +163,14 @@ def main():
     parser.add_argument("--rrf-k", type=int, default=RRF_K, help="RRF k constant for Hybrid")
     args = parser.parse_args()
 
-    global ES_URL, INDEX, QUERIES_FILE, GROUND_TRUTH_FILE, OUTPUT_FILE, RRF_K, TOP_K
     ES_URL = args.es_url
-    INDEX = args.index
+    if args.index:
+        # Legacy single-index mode
+        INDEX_TEXT = args.index
+        INDEX_VECTORS = args.index
+    else:
+        INDEX_TEXT = args.text_index
+        INDEX_VECTORS = args.vector_index
     QUERIES_FILE = args.queries
     GROUND_TRUTH_FILE = args.ground_truth
     OUTPUT_FILE = args.output
@@ -182,7 +195,8 @@ def main():
         print("No ground truth found (skipping NDCG/MRR).")
 
     print(f"Loaded {len(queries)} test queries")
-    print(f"Index: {INDEX}")
+    print(f"Text Index:   {INDEX_TEXT}")
+    print(f"Vector Index: {INDEX_VECTORS}")
     print()
 
     # Warm up

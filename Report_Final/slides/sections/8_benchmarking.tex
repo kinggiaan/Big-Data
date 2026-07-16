@@ -1,0 +1,173 @@
+% ============================================================
+% CHƯƠNG 9: Benchmarking — Latency, Scaling, Storage
+% ============================================================
+\section{Đánh giá hiệu năng}
+
+% ── SLIDE 27: Latency Analysis - Table ──
+\begin{frame}{Latency Analysis --- Bảng tổng quan}
+\centering
+\renewcommand{\arraystretch}{1.1}
+{\small
+\begin{tabular}{l *{6}{c}}
+\toprule
+\multirow{2}{*}{\textbf{Phương pháp}} & \multicolumn{2}{c}{\textbf{100K}} & \multicolumn{2}{c}{\textbf{500K}} & \multicolumn{2}{c}{\textbf{1.2M}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+& P50 & P95 & P50 & P95 & P50 & P95 \\
+\midrule
+Keyword (BM25) & 15 & 56 & 21 & 37 & 71 & 153 \\
+Semantic (kNN) & 13 & 34 & 20 & 41 & 191 & 1206 \\
+\rowcolor{highlightRow}
+\textcolor{accentTeal}{\textbf{Hybrid (RRF)}} & \textcolor{accentTeal}{30} & \textcolor{accentTeal}{53} & \textcolor{accentTeal}{42} & \textcolor{accentTeal}{62} & \textcolor{accentTeal}{\textbf{99}} & \textcolor{accentTeal}{156} \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.05cm}
+{\scriptsize (Đơn vị: milliseconds)}
+
+\vspace{0.15cm}
+
+\begin{exampleblock}{Nhận xét về độ trễ}
+{\small
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Keyword search} duy trì độ trễ rất thấp ở mọi quy mô ($\leq$ 71ms P50).
+    \item \textbf{Hybrid Search} đạt hiệu năng ấn tượng với \textbf{99ms P50} ở quy mô 1.2M tài liệu, đáp ứng tốt tiêu chuẩn thời gian thực ($<$ 100ms).
+\end{itemize}
+}
+\end{exampleblock}
+\end{frame}
+
+% ── SLIDE 28: Latency Analysis - Charts & Cold Start ──
+\begin{frame}{Latency Analysis --- Trực quan hóa \& Thách thức}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{center}
+\includegraphics[width=\textwidth]{latency_comparison.png}
+
+\vspace{0.1cm}
+{\scriptsize Độ trễ các phương thức ở quy mô 1.2M}
+\end{center}
+\end{column}
+\begin{column}{0.48\textwidth}
+
+\begin{alertblock}{Thách thức: Semantic Cold Start}
+{\small
+P95 của Semantic đạt \textbf{1,206ms} ở quy mô 1.2M!\\
+\textbf{Nguyên nhân}: HNSW graph (10.4GB) dung lượng lớn phải load từ SSD vào Page Cache trong truy vấn đầu tiên.\\
+\textbf{Giải pháp}: Cần warmup cache trước khi phục vụ thực tế.
+}
+\end{alertblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 29: Latency Scaling ──
+\begin{frame}{Latency Scaling --- Tăng trưởng theo quy mô}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{latency_scaling.png}
+
+\vspace{0.05cm}
+{\scriptsize Độ trễ P50 tăng trưởng theo quy mô dữ liệu}
+\end{column}
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Phân tích Scaling}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Keyword}: Inverted Index $O(1)$, tăng tuyến tính chậm khi scale (15ms $\to$ 71ms).
+    \item \textbf{Semantic (HNSW)}: Phức tạp $O(\log N)$, tăng nhanh do đồ thị HNSW lớn \& ảnh hưởng IO.
+    \item \textbf{Hybrid}: Bị giới hạn bởi stream chậm hơn, nhưng nhờ chạy song song nên tối ưu chỉ còn 99ms P50.
+\end{itemize}
+}
+\end{block}
+
+\vspace{-0.1cm}
+
+\begin{exampleblock}{Môi trường thử nghiệm}
+{\scriptsize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item CPU: Intel Core i7-11800H (8 nhân/16 luồng)
+    \item RAM: 16GB DDR4 \quad|\quad SSD: NVMe 512GB
+    \item ES: Single node trong Docker trên WSL2 Ubuntu
+\end{itemize}
+}
+\end{exampleblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 30: Storage Analysis - Table ──
+\begin{frame}{Storage Analysis --- Dung lượng lưu trữ}
+\centering
+\renewcommand{\arraystretch}{1.1}
+{\small
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Quy mô (Docs)} & \textbf{Số tài liệu} & \textbf{Dung lượng JSONL} & \textbf{Dung lượng ES Index} \\
+\midrule
+100K & 100,000 & 917 MB & 860 MB \\
+500K & 500,000 & 4.6 GB & 4.3 GB \\
+1.2M & 1,203,108 & 12 GB & 11.9 GB \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.2cm}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{block}{Phân tích bộ nhớ}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item Tăng trưởng dung lượng \textbf{tuyến tính} theo số lượng tài liệu.
+    \item Elasticsearch nén tốt hơn raw JSONL nhờ cấu trúc nén khối của Lucene.
+\end{itemize}
+}
+\end{block}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{exampleblock}{Dual-Index ở quy mô 1.2M}
+{\footnotesize
+\begin{tabular}{l r}
+\toprule
+\textbf{Index} & \textbf{Dung lượng} \\
+\midrule
+\texttt{arxiv\_text} (BM25) & 1.5 GB \\
+\texttt{arxiv\_vectors} (kNN) & 10.4 GB \\
+\textbf{Tổng cộng} & \textbf{11.9 GB} \\
+\bottomrule
+\end{tabular}
+}
+\end{exampleblock}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 31: Storage Analysis - Charts ──
+\begin{frame}{Storage Analysis --- Trực quan hóa}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+\begin{center}
+\includegraphics[width=\textwidth]{index_size.png}
+
+\vspace{0.1cm}
+{\scriptsize Tăng trưởng dung lượng Index theo quy mô}
+\end{center}
+\end{column}
+\begin{column}{0.46\textwidth}
+\begin{block}{Đặc điểm dữ liệu Vector}
+{\small
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{87\%} dung lượng lưu trữ của hệ thống là dành cho \textbf{dữ liệu vector} (HNSW graph).
+    \item Mỗi vector nhúng: $384 \text{ dims} \times 4 \text{ bytes} = 1{,}536 \text{ bytes}$.
+    \item Việc tách thành Dual-Index giúp truy vấn Keyword search không bị tải dung lượng đồ thị HNSW vào bộ nhớ.
+\end{itemize}
+}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}

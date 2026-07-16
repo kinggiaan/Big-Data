@@ -1,6 +1,11 @@
 """
 Generate a ground-truth template for NDCG/MRR (manual labeling).
 
+Uses dual-index architecture:
+  - BM25 queries  → INDEX_TEXT   (metadata only)
+  - kNN queries   → INDEX_VECTORS (embeddings)
+  - Hybrid (RRF)  → both indices
+
 Creates `data/ground_truth.json` in the format:
 {
   "queries": [
@@ -23,11 +28,16 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
+from src.config import (
+    ES_URL, INDEX_TEXT, INDEX_VECTORS,
+    MODEL_NAME, TITLE_BOOST, RESULT_SIZE, NUM_CANDIDATES, RRF_K,
+)
+
 
 def run_bm25(es, index: str, query: str, size: int):
     resp = es.search(
         index=index,
-        query={"multi_match": {"query": query, "fields": ["title^2", "abstract"]}},
+        query={"multi_match": {"query": query, "fields": [f"title^{TITLE_BOOST}", "abstract"]}},
         size=size,
         _source=False,
     )
@@ -45,12 +55,13 @@ def run_knn(es, index: str, model, query: str, size: int, num_candidates: int):
     return [h["_id"] for h in resp["hits"]["hits"]]
 
 
-def run_hybrid_rrf(es, index: str, model, query: str, size: int, rrf_k: int, num_candidates: int):
+def run_hybrid_rrf(es, index_text: str, index_vectors: str, model, query: str,
+                   size: int, rrf_k: int, num_candidates: int):
     # Mirror evaluate.py logic: BM25 + kNN top-N then RRF merge, then cut to `size`.
     retrieval_size = max(30, size)
 
-    bm25_ids = run_bm25(es, index, query, size=retrieval_size)
-    knn_ids = run_knn(es, index, query, size=retrieval_size, num_candidates=num_candidates)
+    bm25_ids = run_bm25(es, index_text, query, size=retrieval_size)
+    knn_ids = run_knn(es, index_vectors, model, query, size=retrieval_size, num_candidates=num_candidates)
 
     scores = {}
     for rank, did in enumerate(bm25_ids, 1):
@@ -64,13 +75,16 @@ def run_hybrid_rrf(es, index: str, model, query: str, size: int, rrf_k: int, num
 
 def main():
     parser = argparse.ArgumentParser(description="Create ground_truth.json template (manual labeling for NDCG/MRR).")
-    parser.add_argument("--es-url", default="http://localhost:9200")
-    parser.add_argument("--index", default="arxiv_papers_v2_full", help="Index to generate labels for")
+    parser.add_argument("--es-url", default=ES_URL)
+    parser.add_argument("--index-text", default=INDEX_TEXT,
+                        help="ES index for BM25 queries (default: INDEX_TEXT)")
+    parser.add_argument("--index-vectors", default=INDEX_VECTORS,
+                        help="ES index for kNN queries (default: INDEX_VECTORS)")
     parser.add_argument("--queries", default="data/test_queries.json")
     parser.add_argument("--output", default="data/ground_truth.json")
-    parser.add_argument("--topk", type=int, default=10)
-    parser.add_argument("--rrf-k", type=int, default=60)
-    parser.add_argument("--num-candidates", type=int, default=100)
+    parser.add_argument("--topk", type=int, default=RESULT_SIZE)
+    parser.add_argument("--rrf-k", type=int, default=RRF_K)
+    parser.add_argument("--num-candidates", type=int, default=NUM_CANDIDATES)
     args = parser.parse_args()
 
     es = Elasticsearch(args.es_url, request_timeout=60)
@@ -84,8 +98,10 @@ def main():
         queries = json.load(f)
 
     print("Loading embedding model...")
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer(MODEL_NAME)
     print(f"Model ready (device={model.device})")
+    print(f"BM25 index:  {args.index_text}")
+    print(f"kNN index:   {args.index_vectors}")
 
     out = {"generated_at": datetime.now().isoformat(), "queries": []}
 
@@ -95,9 +111,10 @@ def main():
         group = q.get("group")
 
         t0 = time.perf_counter()
-        bm25_ids = run_bm25(es, args.index, qtext, size=args.topk)
-        knn_ids = run_knn(es, args.index, model, qtext, size=args.topk, num_candidates=args.num_candidates)
-        hyb_ids = run_hybrid_rrf(es, args.index, model, qtext, size=args.topk, rrf_k=args.rrf_k, num_candidates=args.num_candidates)
+        bm25_ids = run_bm25(es, args.index_text, qtext, size=args.topk)
+        knn_ids = run_knn(es, args.index_vectors, model, qtext, size=args.topk, num_candidates=args.num_candidates)
+        hyb_ids = run_hybrid_rrf(es, args.index_text, args.index_vectors, model, qtext,
+                                 size=args.topk, rrf_k=args.rrf_k, num_candidates=args.num_candidates)
         dt = time.perf_counter() - t0
 
         if qid is None:

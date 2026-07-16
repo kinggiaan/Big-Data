@@ -5,9 +5,10 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false # Tắt security (HTTPS/Password) để dễ dàng dev ở môi trường local
-      # Heap default 2GB. Override by setting ES_HEAP, e.g.:
-      #   $env:ES_HEAP="4g"; docker compose up -d
-      - "ES_JAVA_OPTS=-Xms${ES_HEAP:-2g} -Xmx${ES_HEAP:-2g}"
+      # Heap default 6GB (needed for dual-index: arxiv_text + arxiv_vectors).
+      # Override by setting ES_HEAP, e.g.:
+      #   $env:ES_HEAP="8g"; docker compose up -d
+      - "ES_JAVA_OPTS=-Xms${ES_HEAP:-6g} -Xmx${ES_HEAP:-6g}"
     ports:
       - "9200:9200"
       - "9300:9300"

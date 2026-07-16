@@ -1,0 +1,191 @@
+% ============================================================
+% CHƯƠNG 1: Giới thiệu — Bối cảnh, Bài toán, Mục tiêu, Dataset, Schema
+% ============================================================
+\section{Giới thiệu}
+
+% ── SLIDE 4: Bối cảnh ──
+\begin{frame}{Bối cảnh và Động lực}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+
+\begin{alertblock}{Thực trạng}
+{\footnotesize Mỗi ngày thế giới tạo ra \textbf{2.5 quintillion bytes} dữ liệu. Phần lớn là \textbf{phi cấu trúc}: văn bản, ảnh, video, bài báo...}
+\end{alertblock}
+
+\vspace{0.05cm}
+
+{\footnotesize \textbf{Các kho dữ liệu học thuật:}}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textcolor{accentBlue}{\textbf{arXiv}}: 2.4+ triệu bài báo
+    \item \textcolor{accentOrange}{\textbf{Google Scholar}}: 380+ triệu bài
+    \item \textcolor{accentPurple}{\textbf{PubMed}}: 36+ triệu bài
+\end{itemize}
+
+\end{column}
+\begin{column}{0.46\textwidth}
+
+\begin{exampleblock}{Vấn đề hiện tại}
+{\footnotesize
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Keyword Search}: chỉ khớp từ vựng, ``car'' $\neq$ ``automobile''
+    \item \textbf{Semantic Search}: hiểu ngữ nghĩa nhưng mất chính xác cho thuật ngữ chuyên ngành
+    \item[$\Rightarrow$] Cần \textcolor{accentTeal}{\textbf{Hybrid Search}}!
+\end{itemize}
+}
+\end{exampleblock}
+
+\vspace{0.05cm}
+
+\begin{block}{Ba thế hệ tìm kiếm}
+{\footnotesize
+\begin{enumerate}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textcolor{accentBlue}{\textbf{Lexical}} (1970s): Đối khớp từ khóa
+    \item \textcolor{accentOrange}{\textbf{Semantic}} (2018): Hiểu ngữ nghĩa
+    \item[\textcolor{accentTeal}{$\star$}] \textcolor{accentTeal}{\textbf{Hybrid}} (2022+): Kết hợp cả hai
+\end{enumerate}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 5: Bài toán ──
+\begin{frame}{Bài toán nghiên cứu}
+\begin{block}{Problem Statement}
+{\small Cho truy vấn $q$, tìm và xếp hạng tài liệu liên quan từ kho \textbf{1.2M+ bài báo khoa học}, kết hợp:}
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textcolor{accentBlue}{\textbf{Keyword search}} (BM25) --- khớp từ vựng chính xác
+    \item \textcolor{accentOrange}{\textbf{Semantic search}} (dense vectors) --- hiểu ngữ nghĩa
+    \item \textcolor{accentTeal}{\textbf{Hybrid search}} (RRF) --- kết hợp song song thông qua RRF
+\end{itemize}
+\end{block}
+
+\vspace{0.1cm}
+
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+\begin{alertblock}{Keyword Search thất bại}
+{\footnotesize
+Query: ``methods to detect fake images''\\
+$\to$ Không match ``deepfake detection''\\
+\textbf{0 từ khóa chung!}
+}
+\end{alertblock}
+\end{column}
+\begin{column}{0.50\textwidth}
+\begin{alertblock}{Semantic Search thất bại}
+{\footnotesize
+Query: ``ViT-B/16 fine-tuning''\\
+$\to$ Model hiểu chung chung ``vision model''\\
+\textbf{Mất precision cho exact terms!}
+}
+\end{alertblock}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 6: Mục tiêu ──
+\begin{frame}{Mục tiêu dự án}
+\begin{enumerate}
+    \item \textcolor{accentTeal}{\textbf{Hybrid Search System}}: Xây dựng hệ thống tìm kiếm kết hợp keyword search + semantic search trên \textbf{Elasticsearch 8.12}
+
+    \vspace{0.15cm}
+    \item \textcolor{accentBlue}{\textbf{GPU Embedding Pipeline}}: Thiết kế pipeline nhúng vector cho \textbf{1.2M+ tài liệu} với GPU acceleration
+
+    \vspace{0.15cm}
+    \item \textcolor{accentOrange}{\textbf{Microservice Architecture}}: Triển khai kiến trúc \textbf{Dual-Index} trên Docker (FastAPI + React)
+
+    \vspace{0.15cm}
+    \item \textcolor{accentPurple}{\textbf{Evaluation}}: Đánh giá bằng \textbf{NDCG@10, MRR@10} với 30 test queries
+
+    \vspace{0.15cm}
+    \item \textcolor{accentTeal}{\textbf{Web Application}}: Giao diện tìm kiếm với 3 chế độ (keyword search, semantic search, Hybrid search), bộ lọc năm/category
+\end{enumerate}
+\end{frame}
+
+% ── SLIDE 7: Dataset ──
+\begin{frame}{Dataset --- arXiv Paper Abstracts}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
+
+\begin{block}{Nguồn dữ liệu}
+{\small
+\begin{itemize}\itemsep0pt \parskip0pt \parsep0pt
+    \item \textbf{Nguồn}: Kaggle (Cornell University)
+    \item \textbf{Tổng}: 2.7M+ bài báo, 4.8GB raw JSON
+    \item \textbf{Lọc}: Chỉ lấy \texttt{cs.*} (Computer Science)
+    \item \textbf{Kết quả}: \textcolor{accentTeal}{\textbf{1,203,108}} bài báo CS
+\end{itemize}
+}
+\end{block}
+
+\vspace{0.1cm}
+
+\begin{exampleblock}{Quy trình làm sạch}
+{\scriptsize
+Streaming đọc $\to$ Lọc \texttt{cs.*} $\to$ Loại JSON lỗi $\to$ Chuẩn hóa text $\to$ Trích xuất năm $\to$ Xuất JSONL
+}
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.46\textwidth}
+
+\begin{block}{Thống kê mô tả}
+\centering
+\renewcommand{\arraystretch}{1.0}
+{\small
+\begin{tabular}{l l}
+\toprule
+\textbf{Chỉ số} & \textbf{Giá trị} \\
+\midrule
+Tổng bài báo & 1,203,108 \\
+Thể loại CS & 40 subcategories \\
+Khoảng thời gian & 1993--2024 \\
+Title trung bình & $\sim$10 từ \\
+Abstract trung bình & $\sim$150 từ \\
+Dung lượng raw & 4.8 GB \\
+Dung lượng JSONL & 12 GB \\
+\bottomrule
+\end{tabular}
+}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 8: Data Schema ──
+\begin{frame}{Cấu trúc dữ liệu --- 6 Fields}
+\centering
+\renewcommand{\arraystretch}{1.1}
+{\small
+\begin{tabular}{l l l p{6cm}}
+\toprule
+\textbf{Field} & \textbf{ES Type} & \textbf{Vai trò Search} & \textbf{Mô tả} \\
+\midrule
+\texttt{id} & \texttt{keyword} & Exact match & Mã định danh arXiv duy nhất \\
+\texttt{title} & \texttt{text} & BM25 (boost $\times$2) & Tiêu đề bài báo \\
+\texttt{abstract} & \texttt{text} & BM25 + Embedding & Tóm tắt nội dung \\
+\texttt{categories} & \texttt{keyword} & Filter/Aggregation & Mã thể loại (cs.AI, cs.LG...) \\
+\texttt{authors} & \texttt{text} & BM25 & Danh sách tác giả \\
+\texttt{year} & \texttt{keyword} & Filter & Năm xuất bản \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.1cm}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{block}{\texttt{text} field}
+{\footnotesize Phân tích tokenization, lowercase, stop-word removal $\to$ \textbf{Inverted Index} $\to$ Full-text search (BM25)}
+\end{block}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{block}{\texttt{keyword} field}
+{\footnotesize Lưu nguyên bản, không phân tích $\to$ \textbf{Doc Values} $\to$ Exact-match filter, aggregation}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}

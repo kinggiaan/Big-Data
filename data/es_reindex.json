@@ -1,0 +1,11 @@
+{
+  "source": {
+    "index": "arxiv_bench",
+    "_source": {
+      "excludes": ["embedding"]
+    }
+  },
+  "dest": {
+    "index": "arxiv_text"
+  }
+}

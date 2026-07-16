@@ -1,0 +1,119 @@
+% ============================================================
+% FINAL REPORT SLIDE: Hybrid Search for Academic Documents
+% LaTeX Beamer — Metropolis Dark Theme (~20-25 phút)
+% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+% ---- Encoding & Language ----
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{vietnam}
+
+% ---- Theme ----
+\usetheme{metropolis}
+
+% ── Dark theme customization ──
+\definecolor{primaryDark}{HTML}{0F1B2D}
+\definecolor{primaryMid}{HTML}{1A2744}
+\definecolor{accentTeal}{HTML}{2DD4BF}
+\definecolor{accentBlue}{HTML}{60A5FA}
+\definecolor{accentOrange}{HTML}{FB923C}
+\definecolor{accentPurple}{HTML}{A78BFA}
+\definecolor{accentRed}{HTML}{F87171}
+\definecolor{textWhite}{HTML}{F1F5F9}
+\definecolor{textLight}{HTML}{CBD5E1}
+\definecolor{textMuted}{HTML}{94A3B8}
+\definecolor{boxBg}{HTML}{1E293B}
+\definecolor{highlightRow}{HTML}{134E4A}
+\definecolor{codeGreen}{HTML}{6EE7B7}
+\definecolor{codePurple}{HTML}{C4B5FD}
+
+% Apply dark Metropolis
+\setbeamercolor{normal text}{fg=textWhite, bg=primaryDark}
+\setbeamercolor{alerted text}{fg=accentOrange}
+\setbeamercolor{example text}{fg=accentTeal}
+\setbeamercolor{title separator}{fg=accentTeal}
+\setbeamercolor{progress bar}{fg=accentTeal, bg=primaryMid}
+\setbeamercolor{progress bar in head/foot}{fg=accentTeal, bg=primaryMid}
+\setbeamercolor{progress bar in section page}{fg=accentTeal, bg=primaryMid}
+\setbeamercolor{frametitle}{bg=primaryMid, fg=white}
+\setbeamercolor{block title}{fg=white, bg=accentBlue!70!black}
+\setbeamercolor{block body}{fg=textWhite, bg=boxBg}
+\setbeamercolor{block title alerted}{fg=white, bg=accentRed!70!black}
+\setbeamercolor{block body alerted}{fg=textWhite, bg=boxBg}
+\setbeamercolor{block title example}{fg=white, bg=accentTeal!60!black}
+\setbeamercolor{block body example}{fg=textWhite, bg=boxBg}
+\setbeamercolor{itemize item}{fg=accentTeal}
+\setbeamercolor{itemize subitem}{fg=accentBlue}
+\setbeamercolor{enumerate item}{fg=accentTeal}
+\setbeamercolor{footline}{fg=textMuted, bg=primaryMid}
+\setbeamercolor{page number in head/foot}{fg=accentTeal}
+\setbeamercolor{section in toc}{fg=textWhite}
+
+\setbeamertemplate{section in toc}[sections numbered]
+\metroset{progressbar=frametitle}
+
+% ---- Packages ----
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\graphicspath{{./}{../images/}}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, backgrounds, fit, decorations.markings}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}  % checkmark
+\newcommand{\xmark}{\ding{55}}  % xmark
+
+% Code listing style
+\lstdefinestyle{codestyle}{
+    basicstyle=\ttfamily\scriptsize\color{textWhite},
+    keywordstyle=\color{codePurple}\bfseries,
+    stringstyle=\color{codeGreen},
+    commentstyle=\color{textMuted}\itshape,
+    backgroundcolor=\color{primaryMid},
+    frame=single,
+    rulecolor=\color{accentTeal!40},
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=2,
+}
+\lstset{style=codestyle}
+
+% ---- Metadata ----
+\title{Building a Hybrid Search System\\for Academic Documents using Elasticsearch}
+\subtitle{Kết hợp Keyword Search, Semantic Search và Hybrid Search}
+\author{
+  \texorpdfstring{
+    \textbf{GVHD:} PGS.TS Thoại Nam\\[0.2cm]
+    {\small
+    Dương Gia An -- 2470293 \quad
+    Trịnh Sơn Lam -- 2470287 \quad
+    Nguyễn Thanh Huyền -- 2570416
+    }
+  }{Group 11}
+}
+\institute{Đại học Bách khoa TP.HCM --- Khoa KH \& KT Máy tính\\CO5135 --- Big Data (HK252)}
+\date{Tháng 5, 2026}
+\titlegraphic{\includegraphics[height=1.2cm]{hcmut.png}}
+
+% ============================================================
+\begin{document}
+
+\input{sections/1_opening}         % Title, Contribution, TOC
+\input{sections/2_introduction}    % Bối cảnh, Bài toán, Mục tiêu, Dataset, Schema
+\input{sections/3_theory}          % ES, BM25, Embedding/HNSW, RRF
+\input{sections/4_architecture}    % System Architecture, Data Flow, Search Flow
+\input{sections/5_embedding}       % Model Selection, GPU Pipeline, Checkpoint
+\input{sections/6_search}          % BM25 Search, kNN Search, Hybrid RRF
+\input{sections/7_evaluation}      % Methodology, Metrics, Results, Analysis
+\input{sections/8_benchmarking}    % Latency, Scaling, Storage
+\input{sections/9_conclusion}      % Summary, Limitations, Demo
+\input{sections/10_closing}        % References, Q&A
+\input{sections/11_backup}         % Backup slides
+
+\end{document}

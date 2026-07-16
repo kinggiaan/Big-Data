@@ -1,0 +1,84 @@
+% ============================================================
+% CHƯƠNG 11: Kết luận — Tóm tắt, Hạn chế, Demo
+% ============================================================
+\section{Kết luận}
+
+% ── SLIDE 29: Summary ──
+\begin{frame}{Tóm tắt kết quả đạt được}
+\begin{enumerate}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{Big Data Pipeline}: Streaming processing 4.8GB, lọc 1.2M bài báo CS không OOM
+
+    \vspace{0.15cm}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{GPU Embedding}: Smart truncation + checkpoint, 1.2M papers embedded trong \textbf{35 phút}
+
+    \vspace{0.15cm}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{Dual-Index Architecture}: \texttt{arxiv\_text} (Keyword) + \texttt{arxiv\_vectors} (Semantic), tối ưu ES indexing
+
+    \vspace{0.15cm}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{Hybrid Search}: NDCG@10 = \textcolor{accentTeal}{\textbf{0.97}}, MRR@10 = \textcolor{accentTeal}{\textbf{0.99}} --- vượt trội Keyword và Semantic search đơn lẻ
+
+    \vspace{0.15cm}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{Comprehensive Evaluation}: 30 queries, 3 nhóm, multi-scale (100K, 500K, 1.2M)
+
+    \vspace{0.15cm}
+    \item[\textcolor{accentTeal}{\cmark}] \textbf{Web Application}: FastAPI + React, 3 chế độ search, bộ lọc năm/category, incremental ingestion
+\end{enumerate}
+\end{frame}
+
+% ── SLIDE 30: Limitations & Future ──
+\begin{frame}{Hạn chế và Hướng phát triển}
+\begin{columns}[T]
+\begin{column}{0.46\textwidth}
+
+\begin{alertblock}{Hạn chế}
+{\small
+\begin{enumerate}
+    \item \textbf{RRF ở application layer}:\\Thêm latency (99ms vs 71ms BM25)
+    \item \textbf{Embedding model cơ bản}:\\MiniLM-L6-v2 hạn chế cho deep scientific concepts
+    \item \textbf{Single-node deployment}:\\Chưa kiểm thử fault tolerance
+\end{enumerate}
+}
+\end{alertblock}
+
+\end{column}
+\begin{column}{0.50\textwidth}
+
+\begin{exampleblock}{Hướng phát triển}
+{\small
+\begin{enumerate}
+    \item \textbf{Native RRF}: Dùng ES DSL built-in RRF API (ES phiên bản mới)
+    \item \textbf{Cross-Encoder Re-ranking}:\\Hybrid top-100 $\to$ re-rank bằng cross-encoder
+    \item \textbf{Multi-node cluster}:\\Docker Swarm/K8s, 3+ nodes
+    \item \textbf{Upgrade embedding}:\\SPECTER2 hoặc E5-large cho scientific text
+\end{enumerate}
+}
+\end{exampleblock}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── SLIDE 31: Demo ──
+\begin{frame}{Demo hệ thống}
+\begin{center}
+\vspace{1cm}
+
+{\LARGE\textbf{\textcolor{accentTeal}{Live Demo}}}
+
+\vspace{0.5cm}
+
+{\large Hybrid Search System for Academic Documents}
+
+\vspace{0.5cm}
+
+{\small
+\textbf{3 chế độ tìm kiếm:} Keyword Search \quad|\quad Semantic Search \quad|\quad Hybrid Search\\[0.3cm]
+\textbf{Bộ lọc:} Năm xuất bản \quad|\quad CS Categories\\[0.3cm]
+\textbf{1,203,108} bài báo CS từ arXiv
+}
+
+\vspace{0.8cm}
+
+{\footnotesize\textcolor{textMuted}{[Video demo sẽ được trình chiếu tại đây]}}
+\end{center}
+\end{frame}

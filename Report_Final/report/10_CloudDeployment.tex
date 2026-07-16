@@ -1,0 +1,83 @@
+\chapter{Giao diện Tìm kiếm (Search Interface)}
+\label{ch:ui}
+
+\section{Kiến trúc Client-Server}
+Để cung cấp trải nghiệm tìm kiếm trực quan và tương tác cho người dùng, hệ thống được thiết kế theo kiến trúc Client-Server gồm hai thành phần chính:
+
+\begin{itemize}
+    \item \textbf{Backend (FastAPI):} Chạy trên \texttt{localhost:8000}, cung cấp các endpoint RESTful cho tìm kiếm, lọc, thống kê và nạp dữ liệu. Backend kết nối trực tiếp với Elasticsearch cục bộ qua cổng 9200 và sử dụng mô hình \texttt{all-MiniLM-L6-v2} để sinh query embedding tại thời điểm truy vấn.
+    \item \textbf{Frontend (React + Vite):} Giao diện người dùng được xây dựng bằng React 18 và bundled bởi Vite 5, chạy trên \texttt{localhost:5173} trong môi trường phát triển. Giao diện giao tiếp với Backend thông qua các lệnh gọi HTTP (fetch API) theo chuẩn CORS.
+\end{itemize}
+
+\section{Các Endpoint API}
+Backend FastAPI cung cấp 5 endpoint chính, được tóm tắt trong Bảng \ref{tab:api-endpoints}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|p{8cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Chức năng} \\
+\hline
+\texttt{GET} & \texttt{/api/search} & Tìm kiếm bài báo theo 3 chế độ (\texttt{hybrid}, \texttt{bm25}, \texttt{knn}). Hỗ trợ tham số: \texttt{q} (query), \texttt{mode}, \texttt{size}, \texttt{yearMin}, \texttt{yearMax}, \texttt{categories}. \\
+\hline
+\texttt{GET} & \texttt{/api/categories} & Trả về top 30 danh mục (aggregation) kèm số lượng bài báo. \\
+\hline
+\texttt{GET} & \texttt{/api/years} & Trả về khoảng năm xuất bản (min, max) trong cơ sở dữ liệu. \\
+\hline
+\texttt{GET} & \texttt{/api/stats} & Trả về tổng số tài liệu trong mỗi chỉ mục (arxiv\_text, arxiv\_vectors). \\
+\hline
+\texttt{POST} & \texttt{/api/ingest} & Nạp bài báo mới vào cả hai chỉ mục. Tự động sinh vector embedding và refresh index. \\
+\hline
+\end{tabular}
+\caption{Các endpoint RESTful của FastAPI Backend}
+\label{tab:api-endpoints}
+\end{table}
+
+\section{Giao diện Người dùng (Frontend)}
+Giao diện tìm kiếm được thiết kế với phong cách hiện đại, tối (dark theme) sử dụng hiệu ứng glassmorphism để mang lại trải nghiệm người dùng chuyên nghiệp. Các thành phần chính bao gồm:
+
+\subsection{Thanh tìm kiếm và Chọn chế độ}
+\begin{itemize}
+    \item \textbf{Ô nhập truy vấn (Search Input):} Cho phép người dùng nhập câu hỏi bằng ngôn ngữ tự nhiên hoặc từ khóa chuyên ngành.
+    \item \textbf{Nút chọn chế độ tìm kiếm:} Ba nút bấm (Hybrid RRF, BM25, kNN) cho phép chuyển đổi giữa các phương pháp tìm kiếm. Chế độ Hybrid được chọn mặc định vì cho kết quả tốt nhất theo kết quả đánh giá (xem Chương \ref{ch:evaluation}).
+\end{itemize}
+
+\subsection{Bảng lọc (Filters Panel)}
+Bảng lọc có thể thu gọn/mở rộng, bao gồm:
+\begin{itemize}
+    \item \textbf{Lọc theo năm (Year Range):} Hai ô nhập số cho phép giới hạn khoảng năm xuất bản (ví dụ: 2020--2026). Khoảng năm hợp lệ được tải tự động từ API \texttt{/api/years}.
+    \item \textbf{Lọc theo danh mục (Category Chips):} Danh sách các nhãn danh mục (cs.AI, cs.CV, cs.CL, \ldots) được tải từ API \texttt{/api/categories}. Người dùng click vào nhãn để chọn/bỏ chọn danh mục lọc.
+\end{itemize}
+
+\subsection{Hiển thị kết quả}
+Mỗi kết quả tìm kiếm được hiển thị dưới dạng thẻ (card) chứa:
+\begin{itemize}
+    \item \textbf{Thứ hạng và Tiêu đề:} Số thứ tự (rank) và tiêu đề bài báo.
+    \item \textbf{Điểm số:} Điểm BM25, Cosine Similarity, hoặc RRF tùy thuộc chế độ tìm kiếm.
+    \item \textbf{Metadata:} Tác giả, năm xuất bản, mã định danh arXiv.
+    \item \textbf{Tóm tắt (Abstract):} Nội dung tóm tắt được cắt ngắn (300 ký tự) để tiết kiệm không gian hiển thị.
+    \item \textbf{Nhãn danh mục:} Các nhãn danh mục (tags) được hiển thị dưới dạng chip có thể nhấn.
+\end{itemize}
+
+\subsection{Thanh thống kê (Stats Bar)}
+Hiển thị ba thông tin tổng quan sau mỗi truy vấn: tổng số kết quả, thời gian phản hồi (latency, tính bằng mili-giây), và chế độ tìm kiếm đang sử dụng.
+
+\section{Hướng dẫn Khởi chạy Hệ thống}
+Để chạy toàn bộ hệ thống trên máy cục bộ, cần khởi động 3 thành phần theo thứ tự:
+
+\begin{enumerate}
+    \item \textbf{Elasticsearch + Kibana:} Khởi động Docker containers.
+    \begin{lstlisting}[language=bash]
+docker-compose up -d
+    \end{lstlisting}
+    \item \textbf{FastAPI Backend:} Chạy server Python.
+    \begin{lstlisting}[language=bash]
+python src/api.py
+    \end{lstlisting}
+    \item \textbf{Frontend React:} Khởi động Vite dev server.
+    \begin{lstlisting}[language=bash]
+cd local-ui && npm run dev
+    \end{lstlisting}
+\end{enumerate}
+
+Sau khi cả ba thành phần đã sẵn sàng, người dùng truy cập giao diện tìm kiếm tại \texttt{http://localhost:5173} trên trình duyệt web.

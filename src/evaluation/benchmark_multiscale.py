@@ -85,8 +85,8 @@ def build_bm25_body(query_text: str):
                 {
                     "multi_match": {
                         "query": query_text,
-                        "fields": ["title^3", "abstract"],
-                        "type": "cross_fields",
+                        "fields": ["title^2", "abstract"],
+                        "type": "best_fields",
                         "minimum_should_match": msm,
                     }
                 }

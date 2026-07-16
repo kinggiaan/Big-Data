@@ -2,3 +2,20 @@
 *
 !.gitignore
 !test_queries.json
+
+# Cho phép đưa thư mục charts/ (biểu đồ kết quả) lên git
+!charts/
+!charts/**
+
+# Cho phép đưa các file cấu hình và kết quả đánh giá (JSON) lên git
+!es_text_mapping.json
+!es_reindex.json
+!es_alias.json
+!ground_truth.json
+!ground_truth_100k.json
+!ground_truth_100k_labeled.json
+!ground_truth_labeled.json
+!benchmark_results.json
+!benchmark_results_partial.json
+!evaluation_results_100k.json
+!evaluation_results_full.json

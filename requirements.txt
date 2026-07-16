@@ -4,5 +4,7 @@ tqdm==4.66.2
 sentence-transformers
 torch
 matplotlib
-streamlit
 plotly
+fastapi
+uvicorn
+pydantic

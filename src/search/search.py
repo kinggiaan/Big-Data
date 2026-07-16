@@ -2,12 +2,13 @@ import json
 import sys
 from elasticsearch import Elasticsearch
 
+from src.config import INDEX_TEXT, ES_URL
+
 # Fix lỗi in tiếng Việt trên Windows
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Khởi tạo kết nối tới Elasticsearch
-es = Elasticsearch("http://localhost:9200")
-INDEX_NAME = "arxiv_papers"
+es = Elasticsearch(ES_URL)
 
 
 def keyword_search(query_text, year_filter=None, size=5):
@@ -41,7 +42,7 @@ def keyword_search(query_text, year_filter=None, size=5):
 
     # Gửi request tới Elasticsearch
     response = es.search(
-        index=INDEX_NAME,
+        index=INDEX_TEXT,
         query=query_body,
         size=size,
         _source=["title", "year", "authors"]  # Chỉ lấy các trường cần thiết để in ra
@@ -74,4 +75,3 @@ if __name__ == "__main__":
     keyword_search("machine learning for healthcare")
     keyword_search("deep learning transformer", year_filter=2023)
     keyword_search("graph neural networks node classification")
-

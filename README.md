@@ -5,7 +5,7 @@ Project: **Building a Hybrid Search System for Academic Documents using Elastics
 ## What you have in this repo
 - Elasticsearch indexing (BM25 + dense vectors)
 - Hybrid search using **manual RRF** (because native RRF requires paid license)
-- Streamlit UI with **year range** + **category multiselect** filters
+- Cloudflare Worker API + static HTML/JS frontend (Cloudflare Pages or any static host)
 - Benchmark / evaluation scripts
 
 ## Prerequisites
@@ -52,44 +52,94 @@ docker compose up -d
 ## Quick Start (Midterm: 100k)
 
 ### 1) Start Elasticsearch + Kibana
-```powershell
+```bash
 docker compose up -d
 ```
-Then you should be able to open Kibana at:
-- `http://localhost:5601`
+Kibana Dashboard sẽ mở tại: `http://localhost:5601`
 
-### 2) Prepare data (extract CS papers)
-This generates:
-- `data/arxiv_cs_100k_clean.json`
-```powershell
-.\venv\Scripts\python.exe .\src\data_prep.py
+### 2) Prepare data (trích xuất các bài báo CS)
+Lệnh này lọc dữ liệu gốc để lấy 100k bài báo thuộc lĩnh vực Computer Science:
+- Tạo ra file: `data/arxiv_cs_100k_clean.json`
+```bash
+python src/data_prep.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/data_prep.py`)*
+
+### 3) Embed (Title + Abstract -> Dense Vectors 384-dim)
+Sinh vector embedding cho các bài báo (nếu teammate có sẵn file `.jsonl` đã embed từ Google Drive thì có thể bỏ qua bước này):
+- Tạo ra file: `data/arxiv_cs_100k_with_vectors.jsonl`
+```bash
+python src/embed_data.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/embed_data.py`)*
+
+### 4) Cấu hình Dual-Index Architecture
+Hệ thống sử dụng kiến trúc **Dual-Index** (tách riêng index tìm kiếm văn bản BM25 và index tìm kiếm kNN vector) nhằm tối ưu hiệu năng và dung lượng. Các bước thiết lập như sau:
+
+#### Bước A: Đẩy toàn bộ dữ liệu (metadata + vector) vào index cơ sở `arxiv_bench`
+```bash
+python src/index_data_v2.py --input data/arxiv_cs_100k_with_vectors.jsonl --index arxiv_bench
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/index_data_v2.py ...`)*
+
+#### Bước B: Chạy Script tự động phân tách cấu trúc Dual-Index
+```bash
+python src/setup_dual_index.py
+```
+*(Windows dùng: `.\venv\Scripts\python.exe src/setup_dual_index.py`)*
+
+**Ý nghĩa các file cấu hình Elasticsearch trong thư mục `data/` được sử dụng trong script:**
+* 📄 **`data/es_text_mapping.json`**: Chứa cài đặt cấu trúc cho index **`arxiv_text`** (dùng cho tìm kiếm text BM25). Index này sử dụng bộ phân tách từ tùy chỉnh `academic_english` (hỗ trợ chữ thường, lọc stopword học thuật) và **loại bỏ hoàn toàn trường vector** để giữ index nhẹ tối đa.
+* 📄 **`data/es_reindex.json`**: Cú pháp lệnh gửi tới API `_reindex` của Elasticsearch để đồng bộ dữ liệu từ `arxiv_bench` sang `arxiv_text`, chỉ lọc lấy các trường text và loại trừ trường `embedding`.
+* 📄 **`data/es_alias.json`**: Lệnh gán nhãn Alias **`arxiv_vectors`** trỏ vào index `arxiv_bench` chứa vector, giúp truy vấn kNN hoạt động ổn định thông qua bí danh.
+
+---
+
+## 💻 Khởi chạy Local API & Giao diện React UI
+
+### 1) Chạy FastAPI Backend
+Dịch vụ API cục bộ hỗ trợ tìm kiếm Hybrid (RRF), BM25, kNN, lấy danh sách categories, years, và Ingest dữ liệu mới:
+```bash
+python src/api.py
+```
+* API hoạt động tại: `http://localhost:8000`
+* Tài liệu Swagger UI: `http://localhost:8000/docs`
+
+### 2) Chạy React + Vite Frontend
+Giao diện tìm kiếm học thuật được thiết kế Premium Dark Glassmorphism, bộ lọc năm và chuyên mục được hiển thị trực quan, kiểm thử logic năm tự động:
+```bash
+cd local-ui
+npm install
+npm run dev
+```
+* Giao diện hoạt động tại: `http://localhost:5173`
+
+---
+
+## 🧪 Đánh giá & Phân tích (Evaluation)
+
+### 1) Run evaluation (30 queries)
+Đánh giá chất lượng tìm kiếm bằng các độ đo học thuật:
+- Tạo ra file: `data/evaluation_results.json`
+```bash
+python src/evaluate.py
 ```
 
-### 3) Embed (title + abstract -> dense vectors)
-This generates (default output):
-- `data/arxiv_cs_100k_with_vectors.jsonl`
-```powershell
-.\venv\Scripts\python.exe .\src\embed_data.py
-```
+### 2) Cloudflare API Deployment (Tùy chọn)
+Nếu muốn triển khai API lên Cloudflare Worker thay vì chạy server local:
+1. Tạo API token có quyền "Edit Cloudflare Workers" tại: https://dash.cloudflare.com/profile/api-tokens.
+2. Lưu token vào file `.env` tại `cloudflare/worker/.env`:
+   ```env
+   CLOUDFLARE_API_TOKEN=your_token_goes_here
+   ```
+3. Deploy Worker:
+   ```bash
+   export $(grep CLOUDFLARE_API_TOKEN cloudflare/worker/.env)
+   cd cloudflare/worker
+   npx wrangler deploy
+   ```
 
-### 4) Index into Elasticsearch (v2 index with vectors)
-This (default) builds:
-- index: `arxiv_papers_v2`
-```powershell
-.\venv\Scripts\python.exe .\src\index_data_v2.py
-```
 
-### 5) Run evaluation (30 queries)
-Output:
-- `data/evaluation_results.json`
-```powershell
-.\venv\Scripts\python.exe .\src\evaluate.py
-```
-
-### 6) Launch Streamlit UI
-```powershell
-.\venv\Scripts\streamlit.exe run .\src\app.py
-```
 
 ## Scale-Up (Final: 1.16M)
 
@@ -147,11 +197,49 @@ Output:
 ## Code layout (high level)
 - `src/pipeline/`: data prep, embedding, indexing
 - `src/search/`: BM25 / kNN / Hybrid + compare utilities
-- `src/ui/`: Streamlit UI implementation
 - `src/evaluation/`: evaluation + benchmark scripts
 - `src/utils/`: sanity checks and data helpers
 
 Note: The files in `src/*.py` are mainly **entry-point wrappers** so older commands still work.
+
+## Dual-Index Architecture
+
+The system uses a **two-index** design for optimal performance and storage efficiency:
+
+| Index | Alias | Purpose | Size | Documents |
+|-------|-------|---------|------|-----------|
+| `arxiv_text` | — | BM25 full-text search (title, abstract, categories, authors) | ~1.5 GB | 1,203,108 |
+| `arxiv_bench` | `arxiv_vectors` | kNN dense-vector search (id + 384-dim embedding) | ~10.4 GB | 1,203,108 |
+
+- **`arxiv_text`** stores all metadata fields but **no embedding vectors**, keeping the index compact and BM25 queries fast.
+- **`arxiv_vectors`** (alias → `arxiv_bench`) stores only the document `id` and a 384-dimensional dense vector produced by `all-MiniLM-L6-v2`. This index is used exclusively for kNN approximate nearest-neighbor queries.
+- **Hybrid search** runs BM25 on `arxiv_text` and kNN on `arxiv_vectors` in parallel, then merges results using **manual Reciprocal Rank Fusion (RRF)** with `k=60`.
+
+Configuration lives in [`src/config.py`](src/config.py):
+```python
+INDEX_TEXT    = "arxiv_text"      # BM25 index
+INDEX_VECTORS = "arxiv_vectors"  # kNN index (alias → arxiv_bench)
+```
+
+## Incremental Ingestion
+
+New documents can be ingested without rebuilding the full index:
+
+```bash
+# CLI — ingest a JSONL file (with optional embedding)
+python -m src.pipeline.ingest --input data/new_papers.jsonl
+
+# REST API — POST a batch of documents
+curl -X POST http://localhost:8000/api/ingest \
+  -H "Content-Type: application/json" \
+  -d @data/new_papers.json
+```
+
+The ingestion pipeline will:
+1. Parse and validate each document.
+2. Generate embeddings (if not already present) using `all-MiniLM-L6-v2`.
+3. Bulk-index metadata into `arxiv_text` and vectors into `arxiv_vectors`.
+4. Report per-batch progress and final counts.
 
 ## Common Errors & Fixes
 

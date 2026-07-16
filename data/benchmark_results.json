@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-05-22T23:28:22.903226",
+  "index_text": "arxiv_text",
+  "index_vectors": "arxiv_vectors",
+  "index_info_text": {
+    "doc_count": 1203108,
+    "size_bytes": 1625249198,
+    "size_mb": 1550.0
+  },
+  "index_info_vectors": {
+    "doc_count": 1203108,
+    "size_bytes": 11168163614,
+    "size_mb": 10650.8
+  },
+  "jvm": {
+    "heap_used_mb": 3514.0,
+    "heap_max_mb": 6144.0,
+    "heap_percent": 57
+  },
+  "num_queries": 20,
+  "bm25": {
+    "avg_ms": 82.9,
+    "p50_ms": 70.6,
+    "p95_ms": 152.6,
+    "p99_ms": 164.7,
+    "min_ms": 42.1,
+    "max_ms": 167.7
+  },
+  "knn": {
+    "avg_ms": 281.8,
+    "p50_ms": 191.3,
+    "p95_ms": 1205.8,
+    "p99_ms": 1244.9,
+    "min_ms": 58.4,
+    "max_ms": 1254.7
+  },
+  "hybrid_rrf": {
+    "avg_ms": 111.4,
+    "p50_ms": 99.0,
+    "p95_ms": 156.4,
+    "p99_ms": 196.6,
+    "min_ms": 78.2,
+    "max_ms": 206.7
+  }
+}
