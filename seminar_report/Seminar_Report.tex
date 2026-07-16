@@ -1,0 +1,316 @@
+% ============================================================
+% SEMINAR REPORT: Hybrid Search for Academic Papers
+% Khung sườn — Bạn sẽ bổ sung chi tiết
+% ============================================================
+\documentclass[letterpaper,12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{vietnam}
+\usepackage{a4wide,amssymb,epsfig,latexsym,multicol,array,hhline,fancyhdr}
+\usepackage{amsmath}
+\usepackage{lastpage}
+\usepackage{enumerate}
+\usepackage{color}
+\usepackage{graphicx}
+\graphicspath{{images/}{../Report_Final/images/}}
+\usepackage{array}
+\usepackage{tabularx, caption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+\usepackage{hyperref}
+\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{booktabs}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mein_style}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    language=Python
+}
+\lstset{style=mein_style}
+
+% Header / Footer (reuse from Report_Final)
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[L]{
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=8mm, height=8mm]{hcmut.png}}
+   \end{picture}&
+	\begin{tabular}{l}
+		\textbf{\bf \ttfamily University of Technology, Ho Chi Minh City}\\
+		\textbf{\bf \ttfamily Faculty of Computer Science and Engineering}
+	\end{tabular}
+ \end{tabular}
+}
+\fancyhead[R]{\begin{tabular}{l}\tiny \bf \\\tiny \bf \end{tabular}}
+\fancyfoot{}
+\fancyfoot[L]{\scriptsize \ttfamily Big Data Seminar, Semester 2, Academic year 2025-2026}
+\fancyfoot[R]{\scriptsize \ttfamily {\thepage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+\begin{document}
+
+% ============================================================
+% TITLE PAGE
+% ============================================================
+\pagenumbering{gobble}
+\begin{titlepage}
+\begin{center}
+VIETNAM NATIONAL UNIVERSITY, HO CHI MINH CITY \par
+UNIVERSITY OF TECHNOLOGY \par
+FACULTY OF COMPUTER SCIENCE AND ENGINEERING
+\end{center}
+
+\vspace{1cm}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=3cm]{hcmut.png}
+\end{center}
+\end{figure}
+
+\vspace{1cm}
+
+\begin{center}
+\begin{tabular}{c}
+\multicolumn{1}{c}{\textbf{{ BIG DATA --- SEMINAR REPORT}}}\\
+~~\\
+\hline
+\\
+\multicolumn{1}{c}{\textbf{{\Large Seminar Report}}}\\
+\rule{\textwidth}{0.4pt} \\
+\textbf{{\Huge Building a Hybrid Search System}}\\
+\textbf{{\Huge for Academic Documents}}\\
+\textbf{{\Huge using Elasticsearch}}\\
+\\
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{table}[h]
+\begin{tabular}{rrll}
+\hspace{1 cm} & \textbf{Instructor(s)}: & PGS.TS Thoai Nam\\
+& \textbf{Student(s)}: & Duong Gia An & 2470293\\
+& & Trinh Son Lam & 2470287\\
+& & Nguyen Thanh Huyen & 2570416\\
+\end {tabular}
+\end{table}
+\vspace{1cm}
+\begin{center}
+{\footnotesize HO CHI MINH CITY, MAY 2026}
+\end{center}
+\end{titlepage}
+
+% ============================================================
+% TABLE OF CONTENTS
+% ============================================================
+\clearpage
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+\pagestyle{fancy}
+
+% ============================================================
+% CHAPTER 1: GIỚI THIỆU
+% ============================================================
+\chapter{Giới thiệu}
+
+\section{Bối cảnh vấn đề}
+% TODO: Viết về sự bùng nổ tài liệu học thuật, arXiv chứa 2.4M+ bài báo
+% - Information overload trong nghiên cứu khoa học
+% - Hạn chế của keyword search truyền thống
+% - Hạn chế của semantic search thuần túy
+% - Tại sao cần Hybrid Search
+
+\section{Mục tiêu Seminar}
+% TODO: Mục tiêu seminar chia sẻ kiến thức:
+% - Giải thích sâu các thuật toán cốt lõi (BM25, kNN, HNSW, RRF)
+% - Trình bày cách áp dụng lý thuyết vào project thực tế
+% - Chia sẻ bài học kinh nghiệm từ quá trình xây dựng hệ thống
+
+\section{Phạm vi}
+% TODO:
+% - Dataset: arXiv CS papers (1.2M bài báo)
+% - Tech stack: Elasticsearch 8.12, Python, FastAPI, React
+% - Phương pháp: BM25 + kNN + RRF Hybrid Search
+
+% ============================================================
+% CHAPTER 2: CƠ SỞ LÝ THUYẾT
+% ============================================================
+\chapter{Cơ sở Lý thuyết}
+
+\section{Information Retrieval Pipeline}
+% TODO: Giải thích pipeline IR:
+% 1. Ingestion (thu thập, làm sạch)
+% 2. Indexing (lập chỉ mục)
+% 3. Query Processing (xử lý truy vấn)
+
+\section{Inverted Index}
+% TODO: Giải thích chi tiết:
+% - Forward Index vs Inverted Index
+% - Ví dụ minh họa bảng ánh xạ term → documents
+% - Tại sao tốc độ tra cứu là O(1) thay vì O(N)
+% - Tokenization, lowercasing, stemming, stopword removal
+
+\section{Thuật toán BM25 (Best Matching 25)}
+% TODO: Giải thích công thức BM25 step-by-step:
+% - TF (Term Frequency): tần suất từ khóa, bão hòa
+% - IDF (Inverse Document Frequency): từ hiếm → trọng số cao
+% - Document Length Normalization: phạt tài liệu dài
+% - Tham số k1=1.2, b=0.75
+% - Boosting: title^2
+% - Custom analyzer: academic_english (stemming + stopwords)
+% VÍ DỤ: Query "attention mechanism" → tokenize → tra index → tính score
+
+\section{Vector Embedding}
+% TODO: Giải thích chi tiết:
+% - Tại sao cần chuyển text → vector?
+% - Sentence Transformers (BERT-based)
+% - Model: all-MiniLM-L6-v2 (384 chiều, 22.7M params)
+% - Input format: "{title} [SEP] {abstract}"
+% - Cosine similarity formula
+% - Normalize embeddings → dot product = cosine
+% VÍ DỤ: Bảng cosine similarity từ project thực tế
+
+\section{Tìm kiếm chính xác vs Tìm kiếm xấp xỉ}
+% TODO: Giải thích chi tiết:
+% - Tìm kiếm chính xác (Exact brute-force kNN): Tìm k vector gần nhất bằng quét tuyến tính O(N) → bất khả thi cho Big Data
+% - Tìm kiếm xấp xỉ (Approximate Nearest Neighbor - ANN): giải pháp giảm độ phức tạp xuống O(log N)
+% - HNSW (Hierarchical Navigable Small World) làm đại diện cho tìm kiếm xấp xỉ:
+%   + Cấu trúc đồ thị đa tầng
+%   + Lớp trên thưa → nhảy xa, lớp dưới dày → tìm kiếm chi tiết
+%   + Độ phức tạp O(log N)
+% - Tham số num_candidates ảnh hưởng recall vs latency
+% VÍ DỤ: Tìm kiếm 1.2M vectors trong ~70ms bằng HNSW
+
+\section{Reciprocal Rank Fusion (RRF)}
+% TODO: Giải thích chi tiết:
+% - Vấn đề: Điểm số từ khóa (Keyword score) và điểm số vector (Semantic score) không cùng thang đo
+% - Ý tưởng: dùng THỨ HẠNG thay vì ĐIỂM SỐ
+% - Công thức: RRF(d) = Σ 1/(k + rank_r(d)), k=60
+% - Tại sao k=60? (paper gốc Cormack et al. 2009)
+% - So sánh với Weighted Linear Combination
+% VÍ DỤ: Merge 2 danh sách kết quả step-by-step
+
+% ============================================================
+% CHAPTER 3: KIẾN TRÚC HỆ THỐNG
+% ============================================================
+\chapter{Kiến trúc Hệ thống}
+
+\section{Data Pipeline}
+% TODO: Sơ đồ pipeline:
+% Raw JSON (4.8GB) → Streaming Filter → Clean JSONL (1.3GB)
+% → GPU Embedding (35 min) → JSONL + Vectors (12GB)
+% → Bulk Indexing → Elasticsearch Dual-Index
+
+\section{Dual-Index Architecture}
+% TODO: Giải thích tại sao tách 2 index:
+% - arxiv_text: metadata only (1.5GB) → BM25
+% - arxiv_vectors: ID + embedding 384d (10.4GB) → kNN
+% - Ưu điểm: BM25 không load vectors, tiết kiệm RAM
+
+\section{Query Pipeline (Hybrid Search)}
+% TODO: Sơ đồ truy vấn:
+% User Query → FastAPI → [BM25 on arxiv_text] + [kNN on arxiv_vectors]
+% → RRF Merge (k=60) → Top-10 Results
+
+\section{Thách thức Big Data}
+% TODO:
+% - Streaming I/O: không thể json.load() file 4.8GB
+% - Checkpoint/Resume: resume khi crash
+% - Bulk Indexing: batch 5,000, disable refresh
+% - GPU Embedding: 1.2M papers × 384 dims trên Colab/Kaggle
+
+% ============================================================
+% CHAPTER 4: KẾT QUẢ VÀ PHÂN TÍCH
+% ============================================================
+\chapter{Kết quả và Phân tích}
+
+\section{Thiết kế Đánh giá}
+% TODO:
+% - 30 test queries chia 3 nhóm (Exact/Semantic/Mixed)
+% - Ground truth: Majority Voting Proxy
+% - Metrics: NDCG@10, MRR@10
+
+\section{Kết quả Chất lượng Tìm kiếm}
+% TODO: Bảng NDCG@10 / MRR@10 cho Keyword Search vs Semantic Search vs Hybrid
+% - Nhóm A (Exact): Hybrid 0.975 vs Keyword 0.641
+% - Nhóm B (Semantic): Hybrid 0.947 vs Semantic 0.663
+% - Nhóm C (Mixed): Hybrid 0.982 vs Keyword 0.697
+
+\section{Kết quả Hiệu năng (Benchmarking)}
+% TODO: Bảng latency P50/P95 qua 100k/500k/1.2M
+% Bảng storage scaling
+% Phân tích cold start, HNSW cache warming
+
+\section{Phân tích Overlap}
+% TODO: Keyword ∩ Semantic overlap = 1.5/10
+% - Nhóm B: chỉ 0.8/10 → Semantic tìm bài Keyword bỏ sót
+% - Chứng minh giá trị của Hybrid Search
+
+% ============================================================
+% CHAPTER 5: KẾT LUẬN
+% ============================================================
+\chapter{Kết luận và Bài học}
+
+\section{Kết quả đạt được}
+% TODO: Tóm tắt 4-5 kết quả chính
+
+\section{Bài học kinh nghiệm}
+% TODO:
+% 1. Keyword $\neq$ Semantic: hai phương pháp bổ sung nhau (overlap 1.5/10)
+% 2. RRF đơn giản mà hiệu quả (NDCG 0.67 → 0.97)
+% 3. Tìm kiếm xấp xỉ giải bài toán scalability ($O(N) \to O(\log N)$)
+% 4. Streaming pipeline là bắt buộc cho Big Data
+
+\section{Hạn chế}
+% TODO:
+% - Manual RRF: latency cao hơn native ES RRF
+% - Model general-purpose: chưa hiểu domain-specific terms
+% - Single-node deployment
+
+\section{Hướng phát triển}
+% TODO:
+% - Cross-encoder re-ranking
+% - Domain-specific embedding (SPECTER2)
+% - Multi-node cluster
+% - Native ES RRF (paid license)
+
+% ============================================================
+% REFERENCES
+% ============================================================
+\bibliographystyle{plain}
+\bibliography{references}
+\addcontentsline{toc}{chapter}{References}
+
+\end{document}
